@@ -20,14 +20,42 @@ async function devicesCollection() {
   return (await getDb()).collection<DeviceDoc>("devices");
 }
 
-export async function listSites(): Promise<Site[]> {
-  const docs = await (await sitesCollection()).find().sort({ name: 1 }).toArray();
+export async function listSites(filter: { activeOnly?: boolean } = {}): Promise<Site[]> {
+  const query: Record<string, unknown> = {};
+  if (filter.activeOnly) query.active = true;
+  const docs = await (await sitesCollection()).find(query).sort({ name: 1 }).toArray();
   return docs.map(siteFromDoc);
 }
 
 export async function getSiteById(id: string): Promise<Site | null> {
   const doc = await (await sitesCollection()).findOne({ _id: new ObjectId(id) });
   return doc ? siteFromDoc(doc) : null;
+}
+
+export async function setSiteActive(id: string, active: boolean): Promise<Site | null> {
+  const collection = await sitesCollection();
+  await collection.updateOne({ _id: new ObjectId(id) }, { $set: { active } });
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return doc ? siteFromDoc(doc) : null;
+}
+
+/** Counts the holders and devices still pointing at this site, so deletion can refuse to orphan them. */
+export async function countSiteReferences(siteId: string): Promise<{ holders: number; devices: number }> {
+  const oid = new ObjectId(siteId);
+  const holders = await (await holdersCollection()).countDocuments({ siteId: oid });
+  const devices = await (await devicesCollection()).countDocuments({ currentSiteId: oid });
+  return { holders, devices };
+}
+
+export async function deleteSite(
+  id: string,
+): Promise<{ deleted: boolean; holders: number; devices: number }> {
+  const { holders, devices } = await countSiteReferences(id);
+  if (holders > 0 || devices > 0) {
+    return { deleted: false, holders, devices };
+  }
+  await (await sitesCollection()).deleteOne({ _id: new ObjectId(id) });
+  return { deleted: true, holders: 0, devices: 0 };
 }
 
 export interface CreateSiteInput {
@@ -61,9 +89,32 @@ export async function createSite(input: CreateSiteInput): Promise<Site> {
   throw new Error("Could not generate a unique site code");
 }
 
-export async function listModels(): Promise<DeviceModel[]> {
-  const docs = await (await modelsCollection()).find({ active: true }).sort({ name: 1 }).toArray();
+export async function listModels(filter: { activeOnly?: boolean } = {}): Promise<DeviceModel[]> {
+  const query: Record<string, unknown> = {};
+  if (filter.activeOnly) query.active = true;
+  const docs = await (await modelsCollection()).find(query).sort({ name: 1 }).toArray();
   return docs.map(modelFromDoc);
+}
+
+export async function getModelById(id: string): Promise<DeviceModel | null> {
+  const doc = await (await modelsCollection()).findOne({ _id: new ObjectId(id) });
+  return doc ? modelFromDoc(doc) : null;
+}
+
+export async function setModelActive(id: string, active: boolean): Promise<DeviceModel | null> {
+  const collection = await modelsCollection();
+  await collection.updateOne({ _id: new ObjectId(id) }, { $set: { active } });
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return doc ? modelFromDoc(doc) : null;
+}
+
+export async function deleteModel(id: string): Promise<{ deleted: boolean; devices: number }> {
+  const model = await getModelById(id);
+  if (!model) return { deleted: false, devices: 0 };
+  const devices = await (await devicesCollection()).countDocuments({ model: model.name });
+  if (devices > 0) return { deleted: false, devices };
+  await (await modelsCollection()).deleteOne({ _id: new ObjectId(id) });
+  return { deleted: true, devices: 0 };
 }
 
 export interface CreateModelInput {

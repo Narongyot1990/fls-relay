@@ -3,8 +3,10 @@ import { createSite, listSites } from "@/lib/db/queries";
 import { canManageCatalog } from "@/lib/permissions";
 import type { Level } from "@/types";
 
-export async function GET() {
-  const sites = await listSites();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const activeOnly = searchParams.get("activeOnly") === "1";
+  const sites = await listSites({ activeOnly });
   return NextResponse.json({ sites });
 }
 

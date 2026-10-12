@@ -17,6 +17,8 @@ export default function ManageModelsPage() {
   const [fieldKeys, setFieldKeys] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   function loadModels() {
     fetch("/api/models")
@@ -54,6 +56,50 @@ export default function ManageModelsPage() {
       setError("Network error — check your connection and try again");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleToggleActive(model: DeviceModel) {
+    setBusyId(model.id);
+    setRowError(null);
+    try {
+      const res = await fetch(`/api/models/${model.id}`, {
+        method: "PATCH",
+        headers: userHeaders(user),
+        body: JSON.stringify({ active: !model.active }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setRowError({ id: model.id, message: data.error ?? "Could not update model" });
+        return;
+      }
+      loadModels();
+    } catch {
+      setRowError({ id: model.id, message: "Network error — try again" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(model: DeviceModel) {
+    if (!window.confirm(`Delete "${model.name}"? This can't be undone.`)) return;
+    setBusyId(model.id);
+    setRowError(null);
+    try {
+      const res = await fetch(`/api/models/${model.id}`, {
+        method: "DELETE",
+        headers: userHeaders(user),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setRowError({ id: model.id, message: data.error ?? "Could not delete model" });
+        return;
+      }
+      loadModels();
+    } catch {
+      setRowError({ id: model.id, message: "Network error — try again" });
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -121,14 +167,39 @@ export default function ManageModelsPage() {
             <div className="flex flex-col gap-2">
               {(models ?? []).map((m) => (
                 <div key={m.id} className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
-                  <p className="text-base font-medium text-neutral-900">{m.name}</p>
-                  <p className="mt-0.5 text-sm text-neutral-500">
-                    {m.fieldKeys.length === 0
-                      ? "No extra fields"
-                      : m.fieldKeys
-                          .map((k) => DEVICE_FIELD_CATALOG.find((f) => f.key === k)?.label ?? k)
-                          .join(", ")}
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-medium text-neutral-900">{m.name}</p>
+                      <p className="mt-0.5 truncate text-sm text-neutral-500">
+                        <span className={m.active ? "text-emerald-600" : "text-neutral-400"}>
+                          {m.active ? "Active" : "Inactive"}
+                        </span>
+                        {m.fieldKeys.length > 0 &&
+                          ` · ${m.fieldKeys
+                            .map((k) => DEVICE_FIELD_CATALOG.find((f) => f.key === k)?.label ?? k)
+                            .join(", ")}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        disabled={busyId === m.id}
+                        onClick={() => handleToggleActive(m)}
+                        className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:opacity-40"
+                      >
+                        {m.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === m.id}
+                        onClick={() => handleDelete(m)}
+                        className="rounded-full border border-red-200 px-3 py-1.5 text-sm text-red-600 disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {rowError?.id === m.id && <p className="mt-2 text-sm text-red-600">{rowError.message}</p>}
                 </div>
               ))}
             </div>

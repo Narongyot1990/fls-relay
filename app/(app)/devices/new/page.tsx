@@ -26,13 +26,13 @@ export default function RegisterDevicePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/sites")
+    fetch("/api/sites?activeOnly=1")
       .then((r) => r.json())
       .then((data) => {
         setSites(data.sites ?? []);
         setSiteId((prev) => prev || data.sites?.[0]?.id || "");
       });
-    fetch("/api/models")
+    fetch("/api/models?activeOnly=1")
       .then((r) => r.json())
       .then((data) => {
         setModels(data.models ?? []);

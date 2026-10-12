@@ -4,8 +4,10 @@ import { canManageCatalog } from "@/lib/permissions";
 import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
 import type { Level } from "@/types";
 
-export async function GET() {
-  const models = await listModels();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const activeOnly = searchParams.get("activeOnly") === "1";
+  const models = await listModels({ activeOnly });
   return NextResponse.json({ models });
 }
 
