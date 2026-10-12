@@ -5,10 +5,10 @@ import type { PendingItem } from "@/types";
 import { ACCESSORY_LABELS } from "@/lib/codes";
 
 const WRONG_REASONS = [
-  { key: "wrong_phone", label: "เครื่องผิด" },
-  { key: "missing_accessory", label: "อุปกรณ์ไม่ครบ" },
-  { key: "damaged", label: "เครื่องเสียหาย" },
-  { key: "not_me", label: "ไม่ใช่ฉัน" },
+  { key: "wrong_phone", label: "Wrong phone" },
+  { key: "missing_accessory", label: "Accessory missing" },
+  { key: "damaged", label: "Damaged" },
+  { key: "not_me", label: "Not me" },
 ];
 
 interface ConfirmCardProps {
@@ -28,7 +28,7 @@ export function ConfirmCard({ item, onConfirm, onReportIssue }: ConfirmCardProps
         <p className="text-base font-semibold text-neutral-900">
           {item.deviceModel} ····{item.imeiLast4}
         </p>
-        <p className="text-sm text-neutral-500">จาก: {item.fromLabel}</p>
+        <p className="text-sm text-neutral-500">From: {item.fromLabel}</p>
         <p className="text-sm text-neutral-500">{item.createdAt}</p>
       </div>
 
@@ -38,7 +38,7 @@ export function ConfirmCard({ item, onConfirm, onReportIssue }: ConfirmCardProps
         </p>
       )}
       {item.conditionGrade && (
-        <p className="text-sm text-neutral-700">สภาพ {item.conditionGrade}</p>
+        <p className="text-sm text-neutral-700">Condition {item.conditionGrade}</p>
       )}
       <div className="h-16 w-16 rounded-lg bg-neutral-100" aria-hidden />
 
@@ -49,19 +49,19 @@ export function ConfirmCard({ item, onConfirm, onReportIssue }: ConfirmCardProps
             onClick={() => onConfirm(item.id)}
             className="flex-1 min-h-[48px] rounded-xl bg-neutral-900 text-sm font-medium text-white active:bg-neutral-800"
           >
-            ยืนยันรับเครื่อง
+            Confirm
           </button>
           <button
             type="button"
             onClick={() => setShowIssue(true)}
             className="flex-1 min-h-[48px] rounded-xl border border-neutral-300 text-sm font-medium text-neutral-800 active:bg-neutral-50"
           >
-            มีบางอย่างผิดปกติ
+            Something is wrong
           </button>
         </div>
       ) : (
         <div className="flex flex-col gap-3 border-t border-neutral-200 pt-3">
-          <p className="text-sm font-medium text-neutral-800">ปัญหาคืออะไร</p>
+          <p className="text-sm font-medium text-neutral-800">What&apos;s wrong?</p>
           <div className="flex flex-wrap gap-2">
             {WRONG_REASONS.map((r) => (
               <button
@@ -81,7 +81,7 @@ export function ConfirmCard({ item, onConfirm, onReportIssue }: ConfirmCardProps
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="หมายเหตุ (ไม่บังคับ)"
+            placeholder="Note (optional)"
             className="min-h-[72px] w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none placeholder:text-neutral-400"
           />
           <div className="flex gap-3">
@@ -91,14 +91,14 @@ export function ConfirmCard({ item, onConfirm, onReportIssue }: ConfirmCardProps
               onClick={() => reasonKey && onReportIssue(item.id, reasonKey, note)}
               className="flex-1 min-h-[48px] rounded-xl bg-neutral-900 text-sm font-medium text-white disabled:opacity-40"
             >
-              ส่งรายงานปัญหา
+              Send report
             </button>
             <button
               type="button"
               onClick={() => setShowIssue(false)}
               className="flex-1 min-h-[48px] rounded-xl border border-neutral-300 text-sm font-medium text-neutral-800"
             >
-              ยกเลิก
+              Cancel
             </button>
           </div>
         </div>

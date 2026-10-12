@@ -29,15 +29,15 @@ export function CustodyTimeline({ entries }: CustodyTimelineProps) {
               {entry.detail && <p className="text-sm text-neutral-600">{entry.detail}</p>}
               {entry.confirmState === "confirmed" && (
                 <p className="mt-0.5 flex items-center gap-1 text-sm text-emerald-600">
-                  <Check className="h-3.5 w-3.5" /> ยืนยันแล้ว
+                  <Check className="h-3.5 w-3.5" /> Confirmed
                 </p>
               )}
               {entry.confirmState === "pending" && (
-                <p className="mt-0.5 text-sm text-amber-600">รอการยืนยัน</p>
+                <p className="mt-0.5 text-sm text-amber-600">Waiting for confirmation</p>
               )}
               {entry.isCorrection && (
                 <p className="mt-0.5 text-sm text-neutral-500">
-                  รายการแก้ไขอ้างอิง {entry.correctsTxNumber}
+                  Correction referencing {entry.correctsTxNumber}
                 </p>
               )}
             </button>

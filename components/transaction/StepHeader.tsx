@@ -16,11 +16,11 @@ export function StepHeader({ title, step, totalSteps, backHref, onBack }: StepHe
   return (
     <div className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3">
       {onBack ? (
-        <button type="button" onClick={onBack} className={backButtonClass} aria-label="ย้อนกลับ">
+        <button type="button" onClick={onBack} className={backButtonClass} aria-label="Back">
           <ChevronLeft className="h-6 w-6" />
         </button>
       ) : (
-        <Link href={backHref ?? "/"} className={backButtonClass} aria-label="ย้อนกลับ">
+        <Link href={backHref ?? "/"} className={backButtonClass} aria-label="Back">
           <ChevronLeft className="h-6 w-6" />
         </Link>
       )}

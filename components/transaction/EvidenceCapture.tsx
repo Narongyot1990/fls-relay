@@ -14,12 +14,12 @@ export function EvidenceCapture({ label, photoUrl, onCapture, onRemove }: Eviden
     return (
       <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3">
         <div className="h-14 w-14 shrink-0 rounded-lg bg-neutral-200" aria-label="thumbnail" />
-        <span className="flex-1 text-sm text-neutral-600">แนบรูปแล้ว</span>
+        <span className="flex-1 text-sm text-neutral-600">Photo attached</span>
         <button
           type="button"
           onClick={onRemove}
           className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 active:bg-neutral-100"
-          aria-label="ลบรูป"
+          aria-label="Remove photo"
         >
           <X className="h-5 w-5" />
         </button>

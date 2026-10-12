@@ -19,14 +19,14 @@ export function DevicePicker({ devices, selectedId, onSelect, statusLabel }: Dev
         className="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 text-white text-base font-medium active:bg-neutral-800"
       >
         <Camera className="h-5 w-5" />
-        สแกนเครื่อง
+        Scan phone
       </button>
 
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-neutral-500">หรือเลือกจากสต็อกของคุณ</p>
+        <p className="text-sm text-neutral-500">or pick from your stock</p>
         {devices.length === 0 && (
           <p className="rounded-xl border border-dashed border-neutral-200 px-4 py-6 text-center text-sm text-neutral-500">
-            ไม่มีเครื่องในสต็อกของคุณ
+            No phones in your stock
           </p>
         )}
         {devices.map((device) => {
@@ -50,7 +50,7 @@ export function DevicePicker({ devices, selectedId, onSelect, statusLabel }: Dev
               <span className="flex-1">
                 <span className="block text-base font-medium text-neutral-900">{device.model}</span>
                 <span className="block text-sm text-neutral-500">
-                  ····{last4(device.imei)} · {statusLabel ? statusLabel(device) : "ในสต็อก"}
+                  ····{last4(device.imei)} · {statusLabel ? statusLabel(device) : "in stock"}
                 </span>
               </span>
             </button>

@@ -83,9 +83,13 @@ export interface PendingItem {
   photoUrl?: string | null;
 }
 
+export type Level = "L1" | "L2" | "L3" | "L4";
+
 export interface CurrentUser {
   id: string;
   name: string;
-  level: "L1" | "L2" | "L3" | "L4";
+  level: Level;
   siteId: string;
+  /** Sites this user can act on. Empty means every site (L4, and L1 who isn't site-bound). */
+  scopedSiteIds: string[];
 }

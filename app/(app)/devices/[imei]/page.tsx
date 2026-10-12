@@ -25,7 +25,7 @@ export default async function DeviceDetailPage({
         <Link
           href="/devices"
           className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 active:bg-neutral-100"
-          aria-label="ย้อนกลับ"
+          aria-label="Back"
         >
           <ChevronLeft className="h-6 w-6" />
         </Link>
@@ -47,9 +47,9 @@ export default async function DeviceDetailPage({
         </div>
 
         <div>
-          <h2 className="mb-3 text-base font-semibold text-neutral-900">ประวัติการถือครอง</h2>
+          <h2 className="mb-3 text-base font-semibold text-neutral-900">Custody history</h2>
           {timeline.length === 0 ? (
-            <p className="text-sm text-neutral-500">ยังไม่มีประวัติสำหรับเครื่องนี้</p>
+            <p className="text-sm text-neutral-500">No recorded history yet</p>
           ) : (
             <CustodyTimeline entries={timeline} />
           )}

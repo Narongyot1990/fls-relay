@@ -70,9 +70,9 @@ export function SignaturePad({ signed, onSigned }: SignaturePadProps) {
       />
       <div className="flex items-center justify-between">
         <button type="button" onClick={handleClear} className="text-sm text-neutral-500">
-          ล้างลายเซ็น
+          Clear signature
         </button>
-        {signed && <span className="text-sm text-emerald-600">บันทึกลายเซ็นแล้ว</span>}
+        {signed && <span className="text-sm text-emerald-600">Signature captured</span>}
       </div>
     </div>
   );

@@ -9,9 +9,9 @@ export function BottomNav() {
   const pathname = usePathname();
 
   const items = [
-    { href: "/", label: "หน้าหลัก", icon: Home, badge: 0 },
-    { href: "/inbox", label: "รายการรอ", icon: Inbox, badge: PENDING_FOR_ME.length },
-    { href: "/devices", label: "เครื่อง", icon: Smartphone, badge: 0 },
+    { href: "/", label: "Home", icon: Home, badge: 0 },
+    { href: "/inbox", label: "Inbox", icon: Inbox, badge: PENDING_FOR_ME.length },
+    { href: "/devices", label: "Phones", icon: Smartphone, badge: 0 },
   ];
 
   return (

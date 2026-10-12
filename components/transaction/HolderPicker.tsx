@@ -27,7 +27,7 @@ export function HolderPicker({ holders, selectedId, onSelect, onHandToSiteLeader
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหาคนขับ"
+          placeholder="Search driver"
           className="w-full bg-transparent text-base outline-none placeholder:text-neutral-400"
         />
       </div>
@@ -35,7 +35,7 @@ export function HolderPicker({ holders, selectedId, onSelect, onHandToSiteLeader
       <div className="flex flex-col gap-2">
         {filtered.length === 0 && (
           <p className="rounded-xl border border-dashed border-neutral-200 px-4 py-6 text-center text-sm text-neutral-500">
-            ไม่พบคนขับที่ค้นหา
+            No matching driver
           </p>
         )}
         {filtered.map((holder) => {
@@ -69,7 +69,7 @@ export function HolderPicker({ holders, selectedId, onSelect, onHandToSiteLeader
           onClick={onHandToSiteLeader}
           className="flex min-h-[56px] w-full items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left"
         >
-          <span className="text-base text-neutral-900">หรือมอบให้หัวหน้าไซต์อื่น</span>
+          <span className="text-base text-neutral-900">Or hand to another site leader</span>
           <ArrowRight className="h-5 w-5 text-neutral-400" />
         </button>
       )}
