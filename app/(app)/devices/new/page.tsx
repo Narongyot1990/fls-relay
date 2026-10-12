@@ -7,19 +7,20 @@ import { Check, ChevronLeft } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
-import type { Site } from "@/types";
-
-const MODELS = ["Samsung Galaxy A07", "Samsung Galaxy A15", "iPhone SE"];
+import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
+import type { DeviceModel, Site } from "@/types";
 
 export default function RegisterDevicePage() {
   const router = useRouter();
   const { user } = useCurrentUser();
   const [sites, setSites] = useState<Site[]>([]);
+  const [models, setModels] = useState<DeviceModel[]>([]);
   const [siteId, setSiteId] = useState("");
-  const [model, setModel] = useState(MODELS[0]);
+  const [modelName, setModelName] = useState("");
   const [serial, setSerial] = useState("");
   const [imei, setImei] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +32,24 @@ export default function RegisterDevicePage() {
         setSites(data.sites ?? []);
         setSiteId((prev) => prev || data.sites?.[0]?.id || "");
       });
+    fetch("/api/models")
+      .then((r) => r.json())
+      .then((data) => {
+        setModels(data.models ?? []);
+        setModelName((prev) => prev || data.models?.[0]?.name || "");
+      });
   }, []);
+
+  const selectedModel = models.find((m) => m.name === modelName);
+
+  function setCustomField(key: string, value: string) {
+    setCustomFields((prev) => ({ ...prev, [key]: value }));
+  }
 
   const canSubmit =
     !submitting &&
     siteId !== "" &&
+    modelName.trim() !== "" &&
     serial.trim() !== "" &&
     imei.trim().length >= 6 &&
     phoneNumber.trim() !== "";
@@ -47,7 +61,14 @@ export default function RegisterDevicePage() {
       const res = await fetch("/api/devices", {
         method: "POST",
         headers: userHeaders(user),
-        body: JSON.stringify({ imei, serial, model, phoneNumber, siteId }),
+        body: JSON.stringify({
+          imei,
+          serial,
+          model: modelName,
+          phoneNumber,
+          siteId,
+          customFields,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -71,7 +92,7 @@ export default function RegisterDevicePage() {
           </span>
           <div>
             <p className="text-lg font-semibold text-neutral-900">Device registered</p>
-            <p className="mt-1 text-sm text-neutral-600">{model} is now in the register</p>
+            <p className="mt-1 text-sm text-neutral-600">{modelName} is now in the register</p>
           </div>
           <Link
             href="/"
@@ -115,20 +136,29 @@ export default function RegisterDevicePage() {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-neutral-800">Model</span>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
-            >
-              {MODELS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
+            {models.length > 0 ? (
+              <select
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+                className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="rounded-xl border border-dashed border-neutral-300 px-3 py-3 text-sm text-neutral-500">
+                No phone models yet.
+              </p>
+            )}
+            <Link href="/admin/models" className="text-sm font-medium text-neutral-900 underline">
+              + Add a new model
+            </Link>
+          </div>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-neutral-800">Serial number</span>
@@ -160,6 +190,43 @@ export default function RegisterDevicePage() {
               placeholder="089-000-0000"
             />
           </label>
+
+          {selectedModel && selectedModel.fieldKeys.length > 0 && (
+            <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+              <p className="text-sm font-medium text-neutral-800">{selectedModel.name} details</p>
+              {selectedModel.fieldKeys.map((key) => {
+                const field = DEVICE_FIELD_CATALOG.find((f) => f.key === key);
+                if (!field) return null;
+                return (
+                  <label key={key} className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-neutral-800">{field.label}</span>
+                    {field.inputType === "select" ? (
+                      <select
+                        value={customFields[key] ?? ""}
+                        onChange={(e) => setCustomField(key, e.target.value)}
+                        className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
+                      >
+                        <option value="">Select…</option>
+                        {field.options?.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.inputType === "date" ? "date" : "text"}
+                        value={customFields[key] ?? ""}
+                        onChange={(e) => setCustomField(key, e.target.value)}
+                        placeholder={field.placeholder}
+                        className="min-h-[48px] rounded-xl border border-neutral-300 px-3 text-base outline-none"
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

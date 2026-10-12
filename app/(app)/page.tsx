@@ -12,6 +12,7 @@ import {
   CheckSquare,
   Download,
   PlusSquare,
+  Settings,
 } from "lucide-react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { useCurrentUser } from "@/lib/current-user";
@@ -21,6 +22,7 @@ import {
   canExportReports,
   canRegisterDevices,
   canHandleHandovers,
+  canManageCatalog,
 } from "@/lib/permissions";
 import {
   OPEN_EXCEPTIONS_COUNT,
@@ -104,6 +106,13 @@ export default function HomePage() {
           <ActionButton href="/export" icon={Download} label="Export" />
         )}
       </div>
+
+      {canManageCatalog(user.level) && (
+        <div className="mt-2 flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Admin</p>
+          <ActionButton href="/admin" icon={Settings} label="Manage sites & models" />
+        </div>
+      )}
     </div>
   );
 }

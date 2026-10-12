@@ -30,6 +30,14 @@ export interface Site {
   active: boolean;
 }
 
+export interface DeviceModel {
+  id: string;
+  name: string;
+  active: boolean;
+  /** Keys into DEVICE_FIELD_CATALOG (lib/device-model-fields.ts) this model collects at registration. */
+  fieldKeys: string[];
+}
+
 export interface Holder {
   id: string;
   type: "driver" | "site_leader";
@@ -77,6 +85,8 @@ export interface Device {
   currentHolderId: string | null;
   currentSiteId: string;
   mdm?: DeviceMdmInfo;
+  /** Values for this model's optional template fields, keyed by DEVICE_FIELD_CATALOG key. */
+  customFields?: Record<string, string>;
 }
 
 export interface TransactionEvidence {

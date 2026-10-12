@@ -25,6 +25,10 @@ const SITES = [
   { code: "LCB", name: "Laem Chabang site", active: true },
 ];
 
+const MODELS = [
+  { name: "Samsung Galaxy A07", active: true, fieldKeys: ["storageCapacity", "simType", "color"] },
+];
+
 const HOLDERS = [
   { employeeNo: "DRV-0142", type: "driver", name: "Somchai Jaidee", siteCode: "RYG", phone: "081-000-0142", active: true },
   { employeeNo: "DRV-0188", type: "driver", name: "Wichai Suksom", siteCode: "RYG", phone: "081-000-0188", active: true },
@@ -55,13 +59,24 @@ async function main() {
 
   try {
     const sites = db.collection("sites");
+    const models = db.collection("models");
     const holders = db.collection("holders");
     const devices = db.collection("devices");
 
     await sites.createIndex({ code: 1 }, { unique: true });
+    await models.createIndex({ name: 1 }, { unique: true });
     await holders.createIndex({ employeeNo: 1 }, { unique: true });
     await devices.createIndex({ imei: 1 }, { unique: true });
     await devices.createIndex({ serial: 1 }, { unique: true });
+
+    for (const model of MODELS) {
+      await models.findOneAndUpdate(
+        { name: model.name },
+        { $set: { active: model.active, fieldKeys: model.fieldKeys }, $setOnInsert: { _id: new ObjectId() } },
+        { upsert: true, returnDocument: "after" },
+      );
+    }
+    console.log(`Seeded ${MODELS.length} models`);
 
     const siteIdByCode = new Map();
     for (const site of SITES) {

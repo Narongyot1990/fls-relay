@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Smartphone, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/device/StatusBadge";
@@ -8,10 +8,20 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { useCurrentUser } from "@/lib/current-user";
 import { canViewAllSites } from "@/lib/permissions";
 import { last4 } from "@/lib/codes";
-import type { Device, Holder, Site } from "@/types";
+import type { Device, DeviceStatus, Holder, Site } from "@/types";
+
+const STATUS_FILTERS: { key: DeviceStatus | "all"; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "in_site_stock", label: "In stock" },
+  { key: "assigned", label: "Assigned" },
+  { key: "returned", label: "Returned" },
+  { key: "retired", label: "Retired" },
+  { key: "lost", label: "Lost" },
+];
 
 export default function DevicesPage() {
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<DeviceStatus | "all">("all");
   const { user } = useCurrentUser();
   const showAllSites = canViewAllSites(user.level);
 
@@ -46,14 +56,24 @@ export default function DevicesPage() {
     };
   }, [showAllSites, user.siteId]);
 
+  const statusCounts = useMemo(() => {
+    const counts: Partial<Record<DeviceStatus, number>> = {};
+    for (const d of devices ?? []) counts[d.status] = (counts[d.status] ?? 0) + 1;
+    return counts;
+  }, [devices]);
+
   const filtered = (devices ?? []).filter((d) => {
+    if (statusFilter !== "all" && d.status !== statusFilter) return false;
     const q = query.trim().toLowerCase();
     if (!q) return true;
     const holder = holders.find((h) => h.id === d.currentHolderId);
+    const site = sites.find((s) => s.id === d.currentSiteId);
     return (
       last4(d.imei).includes(q) ||
+      d.model.toLowerCase().includes(q) ||
+      d.phoneNumber.toLowerCase().includes(q) ||
       holder?.name.toLowerCase().includes(q) ||
-      d.model.toLowerCase().includes(q)
+      site?.name.toLowerCase().includes(q)
     );
   });
 
@@ -63,6 +83,9 @@ export default function DevicesPage() {
         <h1 className="text-xl font-semibold text-neutral-900">
           {showAllSites ? "All phones" : "Phones at my site"}
         </h1>
+        <span className="text-sm text-neutral-500">
+          {devices !== null && `${filtered.length} of ${devices.length}`}
+        </span>
       </div>
 
       <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3">
@@ -70,9 +93,27 @@ export default function DevicesPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by last 4 digits, holder, or model"
+          placeholder="Search model, holder, site, or last 4 digits"
           className="w-full bg-transparent text-base outline-none placeholder:text-neutral-400"
         />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setStatusFilter(f.key)}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${
+              statusFilter === f.key
+                ? "border-neutral-900 bg-neutral-900 text-white"
+                : "border-neutral-300 text-neutral-700"
+            }`}
+          >
+            {f.label}
+            {f.key !== "all" && statusCounts[f.key] ? ` (${statusCounts[f.key]})` : ""}
+          </button>
+        ))}
       </div>
 
       {error ? (
@@ -94,16 +135,19 @@ export default function DevicesPage() {
               <Link
                 key={device.id}
                 href={`/devices/${device.imei}`}
-                className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3"
               >
-                <div>
-                  <StatusBadge status={device.status} />
-                  <p className="mt-1 text-sm text-neutral-500">
-                    {holder ? holder.name : device.model}
+                <div className="min-w-0">
+                  <p className="truncate text-base font-medium text-neutral-900">{device.model}</p>
+                  <p className="mt-0.5 truncate text-sm text-neutral-500">
+                    {holder ? holder.name : "Unassigned"}
                     {showAllSites && site ? ` · ${site.name}` : ""}
                   </p>
                 </div>
-                <span className="text-sm text-neutral-500">····{last4(device.imei)}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <StatusBadge status={device.status} />
+                  <span className="text-sm text-neutral-500">····{last4(device.imei)}</span>
+                </div>
               </Link>
             );
           })}

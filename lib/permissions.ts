@@ -11,6 +11,11 @@ export function canRegisterDevices(level: Level): boolean {
   return level === "L1";
 }
 
+/** Creating/editing the shared site and phone-model catalog — IT only. */
+export function canManageCatalog(level: Level): boolean {
+  return level === "L1";
+}
+
 export function canHandleHandovers(level: Level): boolean {
   return level === "L2" || level === "L3" || level === "L4";
 }

@@ -1,5 +1,5 @@
-import type { Device, Holder, Site } from "@/types";
-import type { DeviceDoc, HolderDoc, SiteDoc } from "./documents";
+import type { Device, DeviceModel, Holder, Site } from "@/types";
+import type { DeviceDoc, HolderDoc, ModelDoc, SiteDoc } from "./documents";
 
 export function siteFromDoc(doc: SiteDoc): Site {
   return {
@@ -7,6 +7,15 @@ export function siteFromDoc(doc: SiteDoc): Site {
     code: doc.code,
     name: doc.name,
     active: doc.active,
+  };
+}
+
+export function modelFromDoc(doc: ModelDoc): DeviceModel {
+  return {
+    id: doc._id.toHexString(),
+    name: doc.name,
+    active: doc.active,
+    fieldKeys: doc.fieldKeys,
   };
 }
 
@@ -34,5 +43,6 @@ export function deviceFromDoc(doc: DeviceDoc): Device {
     currentHolderId: doc.currentHolderId ? doc.currentHolderId.toHexString() : null,
     currentSiteId: doc.currentSiteId.toHexString(),
     mdm: doc.mdm,
+    customFields: doc.customFields,
   };
 }

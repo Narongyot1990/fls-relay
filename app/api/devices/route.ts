@@ -29,14 +29,23 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { imei, serial, model, phoneNumber, siteId } = body ?? {};
+  const { imei, serial, model, phoneNumber, siteId, customFields } = body ?? {};
 
   if (!imei || !serial || !model || !phoneNumber || !siteId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const safeCustomFields: Record<string, string> =
+    customFields && typeof customFields === "object"
+      ? Object.fromEntries(
+          Object.entries(customFields).filter(
+            ([, v]) => typeof v === "string" && v.trim() !== "",
+          ) as [string, string][],
+        )
+      : {};
+
   try {
-    const device = await createDevice({ imei, serial, model, phoneNumber, siteId });
+    const device = await createDevice({ imei, serial, model, phoneNumber, siteId, customFields: safeCustomFields });
     return NextResponse.json({ device }, { status: 201 });
   } catch (err) {
     if (err instanceof Error && err.message.includes("E11000")) {

@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/device/StatusBadge";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
+import { fieldByKey } from "@/lib/device-model-fields";
 
 export default async function DeviceDetailPage({
   params,
@@ -46,6 +47,20 @@ export default async function DeviceDetailPage({
         </div>
 
         <MdmInfoCard imei={device.imei} mdm={device.mdm} />
+
+        {device.customFields && Object.keys(device.customFields).length > 0 && (
+          <div className="rounded-xl border border-neutral-200 bg-white p-4">
+            <h2 className="mb-2 text-sm font-semibold text-neutral-900">Model details</h2>
+            <dl className="flex flex-col gap-1.5">
+              {Object.entries(device.customFields).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between text-sm">
+                  <dt className="text-neutral-500">{fieldByKey(key)?.label ?? key}</dt>
+                  <dd className="text-neutral-900">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         <div>
           <h2 className="mb-3 text-base font-semibold text-neutral-900">Custody history</h2>

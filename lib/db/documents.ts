@@ -8,6 +8,13 @@ export interface SiteDoc {
   active: boolean;
 }
 
+export interface ModelDoc {
+  _id: ObjectId;
+  name: string;
+  active: boolean;
+  fieldKeys: string[];
+}
+
 export interface HolderDoc {
   _id: ObjectId;
   type: "driver" | "site_leader";
@@ -31,4 +38,5 @@ export interface DeviceDoc {
   registeredAt: Date;
   active: boolean;
   mdm?: DeviceMdmInfo;
+  customFields?: Record<string, string>;
 }
