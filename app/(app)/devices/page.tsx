@@ -1,32 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Smartphone } from "lucide-react";
+import { Search, Smartphone, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useCurrentUser } from "@/lib/current-user";
 import { canViewAllSites } from "@/lib/permissions";
-import { CURRENT_SITE_ID, DEVICES, getHolderById, getSiteById } from "@/lib/mock-data";
 import { last4 } from "@/lib/codes";
+import type { Device, Holder, Site } from "@/types";
 
 export default function DevicesPage() {
   const [query, setQuery] = useState("");
   const { user } = useCurrentUser();
   const showAllSites = canViewAllSites(user.level);
 
-  const devices = DEVICES.filter((d) => showAllSites || d.currentSiteId === CURRENT_SITE_ID).filter(
-    (d) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return true;
-      const holder = getHolderById(d.currentHolderId);
-      return (
-        last4(d.imei).includes(q) ||
-        holder?.name.toLowerCase().includes(q) ||
-        d.model.toLowerCase().includes(q)
-      );
-    },
-  );
+  const [devices, setDevices] = useState<Device[] | null>(null);
+  const [holders, setHolders] = useState<Holder[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const devicesUrl = showAllSites ? "/api/devices" : `/api/devices?siteId=${user.siteId}`;
+
+    Promise.all([
+      fetch(devicesUrl).then((r) => r.json()),
+      fetch("/api/holders").then((r) => r.json()),
+      showAllSites ? fetch("/api/sites").then((r) => r.json()) : Promise.resolve({ sites: [] }),
+    ])
+      .then(([devicesRes, holdersRes, sitesRes]) => {
+        if (cancelled) return;
+        setError(false);
+        setDevices(devicesRes.devices ?? []);
+        setHolders(holdersRes.holders ?? []);
+        setSites(sitesRes.sites ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showAllSites, user.siteId]);
+
+  const filtered = (devices ?? []).filter((d) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const holder = holders.find((h) => h.id === d.currentHolderId);
+    return (
+      last4(d.imei).includes(q) ||
+      holder?.name.toLowerCase().includes(q) ||
+      d.model.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="flex flex-col gap-4 px-4 py-5">
@@ -46,13 +75,21 @@ export default function DevicesPage() {
         />
       </div>
 
-      {devices.length === 0 ? (
+      {error ? (
+        <EmptyState icon={AlertTriangle} message="Couldn't load phones. Try again." />
+      ) : devices === null ? (
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-neutral-100" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState icon={Smartphone} message="No matching phones" />
       ) : (
         <div className="flex flex-col gap-2">
-          {devices.map((device) => {
-            const holder = getHolderById(device.currentHolderId);
-            const site = getSiteById(device.currentSiteId);
+          {filtered.map((device) => {
+            const holder = holders.find((h) => h.id === device.currentHolderId);
+            const site = sites.find((s) => s.id === device.currentSiteId);
             return (
               <Link
                 key={device.id}

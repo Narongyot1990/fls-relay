@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useParams, notFound } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Check, ChevronLeft } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
-import { getDeviceByImei } from "@/lib/mock-data";
+import { useCurrentUser } from "@/lib/current-user";
+import { userHeaders } from "@/lib/api-client";
 import { MDM_MANAGEMENT_MODE_LABELS, MDM_OWNERSHIP_LABELS } from "@/lib/codes";
-import type { MdmComplianceState, MdmManagementMode, MdmOwnershipType } from "@/types";
+import type { Device, MdmComplianceState, MdmManagementMode, MdmOwnershipType } from "@/types";
 
 const MANAGEMENT_MODES: MdmManagementMode[] = ["dedicated", "fully_managed"];
 const OWNERSHIP_TYPES: MdmOwnershipType[] = ["corporate", "personal"];
@@ -16,21 +17,98 @@ const COMPLIANCE_STATES: MdmComplianceState[] = ["compliant", "noncompliant", "u
 export default function EditMdmInfoPage() {
   const router = useRouter();
   const params = useParams<{ imei: string }>();
-  const device = getDeviceByImei(params.imei);
-  if (!device) notFound();
+  const { user } = useCurrentUser();
 
-  const existing = device.mdm;
-  const [deviceName, setDeviceName] = useState(existing?.deviceName ?? "");
-  const [managedBy, setManagedBy] = useState(existing?.managedBy ?? "Intune");
-  const [ownershipType, setOwnershipType] = useState<MdmOwnershipType>(existing?.ownershipType ?? "corporate");
-  const [managementMode, setManagementMode] = useState<MdmManagementMode>(existing?.managementMode ?? "dedicated");
-  const [complianceState, setComplianceState] = useState<MdmComplianceState>(existing?.complianceState ?? "unknown");
-  const [osPlatform, setOsPlatform] = useState(existing?.osPlatform ?? "Android");
-  const [osVersion, setOsVersion] = useState(existing?.osVersion ?? "");
-  const [primaryUserUpn, setPrimaryUserUpn] = useState(existing?.primaryUserUpn ?? "");
+  const [device, setDevice] = useState<Device | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  const [deviceName, setDeviceName] = useState("");
+  const [managedBy, setManagedBy] = useState("Intune");
+  const [ownershipType, setOwnershipType] = useState<MdmOwnershipType>("corporate");
+  const [managementMode, setManagementMode] = useState<MdmManagementMode>("dedicated");
+  const [complianceState, setComplianceState] = useState<MdmComplianceState>("unknown");
+  const [osPlatform, setOsPlatform] = useState("Android");
+  const [osVersion, setOsVersion] = useState("");
+  const [primaryUserUpn, setPrimaryUserUpn] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = deviceName.trim() !== "" && osVersion.trim() !== "";
+  useEffect(() => {
+    fetch(`/api/devices/${params.imei}`)
+      .then((r) => {
+        if (!r.ok) {
+          setNotFound(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (!data?.device) return;
+        const d: Device = data.device;
+        setDevice(d);
+        if (d.mdm) {
+          setDeviceName(d.mdm.deviceName);
+          setManagedBy(d.mdm.managedBy);
+          setOwnershipType(d.mdm.ownershipType);
+          setManagementMode(d.mdm.managementMode);
+          setComplianceState(d.mdm.complianceState);
+          setOsPlatform(d.mdm.osPlatform);
+          setOsVersion(d.mdm.osVersion);
+          setPrimaryUserUpn(d.mdm.primaryUserUpn ?? "");
+        }
+      });
+  }, [params.imei]);
+
+  const canSubmit = !submitting && deviceName.trim() !== "" && osVersion.trim() !== "";
+
+  async function handleSubmit() {
+    if (!device) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/devices/${device.imei}/mdm`, {
+        method: "PATCH",
+        headers: userHeaders(user),
+        body: JSON.stringify({
+          deviceName,
+          managedBy,
+          ownershipType,
+          managementMode,
+          complianceState,
+          osPlatform,
+          osVersion,
+          primaryUserUpn,
+          updatedBy: user.name,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Could not save MDM info");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError("Network error — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+        <p className="text-sm text-neutral-600">Device not found</p>
+        <Link href="/devices" className="text-sm font-medium text-neutral-900 underline">
+          Back to phones
+        </Link>
+      </div>
+    );
+  }
+
+  if (!device) {
+    return <div className="h-40 animate-pulse bg-neutral-100" />;
+  }
 
   if (submitted) {
     return (
@@ -163,13 +241,15 @@ export default function EditMdmInfoPage() {
             />
           </label>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <button
             type="button"
             disabled={!canSubmit}
-            onClick={() => setSubmitted(true)}
+            onClick={handleSubmit}
             className="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
           >
-            Save MDM info
+            {submitting ? "Saving…" : "Save MDM info"}
           </button>
         </div>
       </div>

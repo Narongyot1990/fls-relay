@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,29 +23,44 @@ import {
   canHandleHandovers,
 } from "@/lib/permissions";
 import {
-  CURRENT_SITE_ID,
-  DEVICES,
   OPEN_EXCEPTIONS_COUNT,
   PENDING_FOR_ME,
   UNACCOUNTED_DEVICES_COUNT,
-  getSiteById,
 } from "@/lib/mock-data";
+import type { Device, Site } from "@/types";
 
 export default function HomePage() {
   const { user } = useCurrentUser();
-  const site = getSiteById(user.siteId);
-  const siteDevices = DEVICES.filter((d) => d.currentSiteId === CURRENT_SITE_ID);
-  const inStock = siteDevices.filter((d) => d.status === "in_site_stock").length;
-  const waitingCount = PENDING_FOR_ME.length;
+  const [site, setSite] = useState<Site | null>(null);
+  const [siteDevices, setSiteDevices] = useState<Device[] | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      fetch("/api/sites").then((r) => r.json()),
+      fetch(`/api/devices?siteId=${user.siteId}`).then((r) => r.json()),
+    ]).then(([sitesRes, devicesRes]) => {
+      if (cancelled) return;
+      setSite((sitesRes.sites ?? []).find((s: Site) => s.id === user.siteId) ?? null);
+      setSiteDevices(devicesRes.devices ?? []);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user.siteId]);
+
+  const inStock = (siteDevices ?? []).filter((d) => d.status === "in_site_stock").length;
+  const waitingCount = PENDING_FOR_ME.length;
   const showSummaryStrip = canRunStockCount(user.level) || canApprove(user.level);
 
   return (
     <div className="flex flex-col gap-4 px-4 py-5">
       <div>
-        <h1 className="text-xl font-semibold text-neutral-900">{site?.name}</h1>
+        <h1 className="text-xl font-semibold text-neutral-900">{site?.name ?? " "}</h1>
         <p className="text-sm text-neutral-500">
-          {siteDevices.length} phones · {inStock} in stock
+          {siteDevices === null ? "Loading…" : `${siteDevices.length} phones · ${inStock} in stock`}
         </p>
       </div>
 

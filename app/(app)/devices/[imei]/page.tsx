@@ -2,9 +2,8 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/device/StatusBadge";
-import { CustodyTimeline } from "@/components/device/CustodyTimeline";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
-import { DEVICE_TIMELINE, getDeviceByImei, getHolderById, getSiteById } from "@/lib/mock-data";
+import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 
 export default async function DeviceDetailPage({
@@ -13,12 +12,11 @@ export default async function DeviceDetailPage({
   params: Promise<{ imei: string }>;
 }) {
   const { imei } = await params;
-  const device = getDeviceByImei(imei);
+  const device = await getDeviceByImei(imei);
   if (!device) notFound();
 
-  const holder = getHolderById(device.currentHolderId);
-  const site = getSiteById(device.currentSiteId);
-  const timeline = DEVICE_TIMELINE[device.imei] ?? [];
+  const holder = device.currentHolderId ? await getHolderById(device.currentHolderId) : null;
+  const site = await getSiteById(device.currentSiteId);
 
   return (
     <div className="flex flex-col">
@@ -51,11 +49,9 @@ export default async function DeviceDetailPage({
 
         <div>
           <h2 className="mb-3 text-base font-semibold text-neutral-900">Custody history</h2>
-          {timeline.length === 0 ? (
-            <p className="text-sm text-neutral-500">No recorded history yet</p>
-          ) : (
-            <CustodyTimeline entries={timeline} />
-          )}
+          <p className="text-sm text-neutral-500">
+            No recorded history yet — the transaction ledger isn&apos;t wired up yet.
+          </p>
         </div>
       </div>
     </div>

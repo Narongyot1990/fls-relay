@@ -42,3 +42,5 @@ next-env.d.ts
 
 # real company data (employee emails, device inventory) — never goes to this public repo
 /ideas/
+
+.env*.local

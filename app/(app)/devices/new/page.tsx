@@ -1,22 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
+import { useCurrentUser } from "@/lib/current-user";
+import { userHeaders } from "@/lib/api-client";
+import type { Site } from "@/types";
 
 const MODELS = ["Samsung Galaxy A07", "Samsung Galaxy A15", "iPhone SE"];
 
 export default function RegisterDevicePage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const [sites, setSites] = useState<Site[]>([]);
+  const [siteId, setSiteId] = useState("");
   const [model, setModel] = useState(MODELS[0]);
   const [serial, setSerial] = useState("");
   const [imei, setImei] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = serial.trim() !== "" && imei.trim().length >= 6 && phoneNumber.trim() !== "";
+  useEffect(() => {
+    fetch("/api/sites")
+      .then((r) => r.json())
+      .then((data) => {
+        setSites(data.sites ?? []);
+        setSiteId((prev) => prev || data.sites?.[0]?.id || "");
+      });
+  }, []);
+
+  const canSubmit =
+    !submitting &&
+    siteId !== "" &&
+    serial.trim() !== "" &&
+    imei.trim().length >= 6 &&
+    phoneNumber.trim() !== "";
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/devices", {
+        method: "POST",
+        headers: userHeaders(user),
+        body: JSON.stringify({ imei, serial, model, phoneNumber, siteId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Could not register device");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError("Network error — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (submitted) {
     return (
@@ -56,6 +100,21 @@ export default function RegisterDevicePage() {
         </div>
 
         <div className="flex flex-col gap-4 px-4 py-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-neutral-800">Site</span>
+            <select
+              value={siteId}
+              onChange={(e) => setSiteId(e.target.value)}
+              className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
+            >
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-neutral-800">Model</span>
             <select
@@ -102,13 +161,15 @@ export default function RegisterDevicePage() {
             />
           </label>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <button
             type="button"
             disabled={!canSubmit}
-            onClick={() => setSubmitted(true)}
+            onClick={handleSubmit}
             className="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
           >
-            Register device
+            {submitting ? "Registering…" : "Register device"}
           </button>
         </div>
       </div>

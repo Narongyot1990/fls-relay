@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check } from "lucide-react";
@@ -13,7 +13,7 @@ import { EvidenceCapture } from "@/components/transaction/EvidenceCapture";
 import { SignaturePad } from "@/components/transaction/SignaturePad";
 import { SummaryReadback } from "@/components/transaction/SummaryReadback";
 import { RequireLevel } from "@/components/shared/RequireLevel";
-import { CURRENT_SITE_ID, holdersAtSite, stockAtSite } from "@/lib/mock-data";
+import { useCurrentUser } from "@/lib/current-user";
 import { ACCESSORY_LABELS, deviceLabel, selectedAccessories, DEFAULT_ACCESSORIES } from "@/lib/codes";
 import type { AccessoryKey, ConditionGradeKey, Device, Holder } from "@/types";
 
@@ -22,6 +22,7 @@ const ALLOWED_LEVELS = ["L2", "L3", "L4"] as const;
 
 export default function HandOutPage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<Device | null>(null);
   const [holder, setHolder] = useState<Holder | null>(null);
@@ -32,8 +33,18 @@ export default function HandOutPage() {
   const [signed, setSigned] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const stock = stockAtSite(CURRENT_SITE_ID);
-  const drivers = holdersAtSite(CURRENT_SITE_ID);
+  const [stock, setStock] = useState<Device[]>([]);
+  const [drivers, setDrivers] = useState<Holder[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/devices?siteId=${user.siteId}&status=in_site_stock`)
+      .then((r) => r.json())
+      .then((data) => setStock(data.devices ?? []));
+    fetch(`/api/holders?siteId=${user.siteId}&type=driver`)
+      .then((r) => r.json())
+      .then((data) => setDrivers(data.holders ?? []));
+  }, [user.siteId]);
+
   const canSubmit = formAttached || signed;
 
   function goBack() {

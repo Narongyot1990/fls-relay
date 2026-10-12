@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check } from "lucide-react";
@@ -9,9 +9,9 @@ import { DevicePicker } from "@/components/device/DevicePicker";
 import { ConditionGrade } from "@/components/transaction/ConditionGrade";
 import { SummaryReadback } from "@/components/transaction/SummaryReadback";
 import { RequireLevel } from "@/components/shared/RequireLevel";
-import { CURRENT_SITE_ID, assignedAtSite, getHolderById, stockAtSite } from "@/lib/mock-data";
+import { useCurrentUser } from "@/lib/current-user";
 import { REASON_LABELS, deviceLabel } from "@/lib/codes";
-import type { ConditionGradeKey, Device, ReasonCode } from "@/types";
+import type { ConditionGradeKey, Device, Holder, ReasonCode } from "@/types";
 
 const TOTAL_STEPS = 4;
 const ALLOWED_LEVELS = ["L2", "L3", "L4"] as const;
@@ -20,6 +20,7 @@ const SWAP_REASONS: ReasonCode[] = ["malfunction", "damage", "upgrade"];
 
 export default function SwapPage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [step, setStep] = useState(1);
   const [outgoing, setOutgoing] = useState<Device | null>(null);
   const [incoming, setIncoming] = useState<Device | null>(null);
@@ -27,9 +28,24 @@ export default function SwapPage() {
   const [condition, setCondition] = useState<ConditionGradeKey>("C");
   const [submitted, setSubmitted] = useState(false);
 
-  const assigned = assignedAtSite(CURRENT_SITE_ID);
-  const stock = stockAtSite(CURRENT_SITE_ID).filter((d) => d.id !== outgoing?.id);
-  const holder = outgoing ? getHolderById(outgoing.currentHolderId) : undefined;
+  const [assigned, setAssigned] = useState<Device[]>([]);
+  const [stock, setStock] = useState<Device[]>([]);
+  const [holders, setHolders] = useState<Holder[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/devices?siteId=${user.siteId}&status=assigned`)
+      .then((r) => r.json())
+      .then((data) => setAssigned(data.devices ?? []));
+    fetch(`/api/devices?siteId=${user.siteId}&status=in_site_stock`)
+      .then((r) => r.json())
+      .then((data) => setStock(data.devices ?? []));
+    fetch(`/api/holders?siteId=${user.siteId}`)
+      .then((r) => r.json())
+      .then((data) => setHolders(data.holders ?? []));
+  }, [user.siteId]);
+
+  const availableStock = stock.filter((d) => d.id !== outgoing?.id);
+  const holder = outgoing ? holders.find((h) => h.id === outgoing.currentHolderId) : undefined;
 
   function goBack() {
     if (step === 1) router.push("/");
@@ -74,7 +90,7 @@ export default function SwapPage() {
                 devices={assigned}
                 selectedId={outgoing?.id ?? null}
                 onSelect={(d) => setOutgoing(d)}
-                statusLabel={(d) => getHolderById(d.currentHolderId)?.name ?? "Assigned"}
+                statusLabel={(d) => holders.find((h) => h.id === d.currentHolderId)?.name ?? "Assigned"}
               />
             </>
           )}
@@ -83,7 +99,7 @@ export default function SwapPage() {
             <>
               <p className="text-sm text-neutral-500">Replacement phone</p>
               <DevicePicker
-                devices={stock}
+                devices={availableStock}
                 selectedId={incoming?.id ?? null}
                 onSelect={(d) => setIncoming(d)}
               />

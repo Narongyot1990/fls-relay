@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check } from "lucide-react";
@@ -11,15 +11,16 @@ import { ConditionGrade } from "@/components/transaction/ConditionGrade";
 import { EvidenceCapture } from "@/components/transaction/EvidenceCapture";
 import { SummaryReadback } from "@/components/transaction/SummaryReadback";
 import { RequireLevel } from "@/components/shared/RequireLevel";
-import { CURRENT_SITE_ID, assignedAtSite, getHolderById } from "@/lib/mock-data";
+import { useCurrentUser } from "@/lib/current-user";
 import { ACCESSORY_LABELS, deviceLabel, selectedAccessories, DEFAULT_ACCESSORIES } from "@/lib/codes";
-import type { AccessoryKey, ConditionGradeKey, Device } from "@/types";
+import type { AccessoryKey, ConditionGradeKey, Device, Holder } from "@/types";
 
 const TOTAL_STEPS = 3;
 const ALLOWED_LEVELS = ["L2", "L3", "L4"] as const;
 
 export default function TakeBackPage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [step, setStep] = useState(1);
   const [device, setDevice] = useState<Device | null>(null);
   const [accessories, setAccessories] = useState<Record<AccessoryKey, boolean>>(DEFAULT_ACCESSORIES);
@@ -27,8 +28,19 @@ export default function TakeBackPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const assigned = assignedAtSite(CURRENT_SITE_ID);
-  const holder = device ? getHolderById(device.currentHolderId) : undefined;
+  const [assigned, setAssigned] = useState<Device[]>([]);
+  const [holders, setHolders] = useState<Holder[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/devices?siteId=${user.siteId}&status=assigned`)
+      .then((r) => r.json())
+      .then((data) => setAssigned(data.devices ?? []));
+    fetch(`/api/holders?siteId=${user.siteId}`)
+      .then((r) => r.json())
+      .then((data) => setHolders(data.holders ?? []));
+  }, [user.siteId]);
+
+  const holder = device ? holders.find((h) => h.id === device.currentHolderId) : undefined;
 
   function goBack() {
     if (step === 1) router.push("/");
@@ -68,7 +80,7 @@ export default function TakeBackPage() {
               devices={assigned}
               selectedId={device?.id ?? null}
               onSelect={(d) => setDevice(d)}
-              statusLabel={(d) => getHolderById(d.currentHolderId)?.name ?? "Assigned"}
+              statusLabel={(d) => holders.find((h) => h.id === d.currentHolderId)?.name ?? "Assigned"}
             />
           )}
 
