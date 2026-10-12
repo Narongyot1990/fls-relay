@@ -134,9 +134,32 @@ These are the business rules the system enforces. Written as standard text for t
   currentSiteId: ObjectId,   // ref sites
   registeredAt: Date,
   registeredBy: ObjectId,
-  active: Boolean
+  active: Boolean,
+  mdm: {                     // optional — present once IT has entered MDM info for this device
+    deviceName: String,      // name/hostname as shown in the MDM console (any vendor, any naming scheme)
+    managedBy: String,       // free text, e.g. "Intune" — not a fixed enum, so a future MDM tool isn't blocked
+    ownershipType: String,   // enum: corporate | personal
+    managementMode: String,  // enum: dedicated (shared/kiosk) | fully_managed (single user)
+    complianceState: String, // enum: compliant | noncompliant | unknown
+    osPlatform: String,      // e.g. "Android"
+    osVersion: String,
+    primaryUserUpn: String,  // nullable — MDM enrollment identity, NOT the custody holder
+    lastCheckInAt: Date,     // nullable
+    updatedAt: Date,
+    updatedBy: ObjectId      // ref users, must be L1
+  }
 }
 ```
+
+**`mdm` is reference data, not custody state.** It is written only through the device's
+"edit MDM info" action (L1 only) — never by a handover transaction, and never derived from the
+ledger. `mdm.primaryUserUpn` is whoever MDM has enrolled the device to; it answers a different
+question than `currentHolderId` (who is physically holding the device right now) and the two
+must never be synced into each other. For this phase, IT enters `mdm.*` by hand from whatever
+the MDM console shows; there is no scheduled sync job. A real MDM export (e.g. an Intune device
+list) carries no IMEI, so there is no reliable join key back to `devices` yet — matching an
+export row to a registered device is a manual IT step, by device name/model, until a stronger
+key is established.
 
 ### `transactions`
 ```js

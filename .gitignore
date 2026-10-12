@@ -40,4 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# real company data (employee emails, device inventory) — never goes to this public repo
+/ideas/

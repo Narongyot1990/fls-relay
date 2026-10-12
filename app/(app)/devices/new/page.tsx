@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronLeft } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 
-const MODELS = ["Samsung A15", "Samsung A25", "iPhone SE"];
+const MODELS = ["Samsung Galaxy A07", "Samsung Galaxy A15", "iPhone SE"];
 
 export default function RegisterDevicePage() {
   const router = useRouter();

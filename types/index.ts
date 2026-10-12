@@ -41,6 +41,32 @@ export interface Holder {
   separatedAt?: string;
 }
 
+export type MdmOwnershipType = "corporate" | "personal";
+export type MdmManagementMode = "dedicated" | "fully_managed";
+export type MdmComplianceState = "compliant" | "noncompliant" | "unknown";
+
+/**
+ * Snapshot of this device's MDM enrollment, entered by IT from whatever the MDM
+ * console shows (Intune today, possibly another tool later — kept free-form on
+ * purpose so this isn't tied to one vendor's naming). Written only through the
+ * device's MDM-info edit action, never by a handover transaction: it is reference
+ * data for IT, not a custody signal. `primaryUserUpn` is the MDM enrollment
+ * identity, not the physical holder — never sync it into `currentHolderId`.
+ */
+export interface DeviceMdmInfo {
+  deviceName: string;
+  managedBy: string;
+  ownershipType: MdmOwnershipType;
+  managementMode: MdmManagementMode;
+  complianceState: MdmComplianceState;
+  osPlatform: string;
+  osVersion: string;
+  primaryUserUpn: string | null;
+  lastCheckInAt: string | null;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 export interface Device {
   id: string;
   imei: string;
@@ -50,6 +76,7 @@ export interface Device {
   status: DeviceStatus;
   currentHolderId: string | null;
   currentSiteId: string;
+  mdm?: DeviceMdmInfo;
 }
 
 export interface TransactionEvidence {

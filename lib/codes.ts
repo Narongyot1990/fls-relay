@@ -1,4 +1,13 @@
-import type { AccessoryKey, ConditionGradeKey, Device, DeviceStatus, ReasonCode } from "@/types";
+import type {
+  AccessoryKey,
+  ConditionGradeKey,
+  Device,
+  DeviceStatus,
+  MdmComplianceState,
+  MdmManagementMode,
+  MdmOwnershipType,
+  ReasonCode,
+} from "@/types";
 
 export const ACCESSORY_LABELS: Record<AccessoryKey, string> = {
   charger: "Charger",
@@ -42,6 +51,22 @@ export const STATUS_LABELS: Record<DeviceStatus, { label: string; dotClass: stri
   returned: { label: "Returned", dotClass: "bg-amber-500" },
   retired: { label: "Retired", dotClass: "bg-neutral-400" },
   lost: { label: "Lost", dotClass: "bg-red-500" },
+};
+
+export const MDM_OWNERSHIP_LABELS: Record<MdmOwnershipType, string> = {
+  corporate: "Corporate",
+  personal: "Personal",
+};
+
+export const MDM_MANAGEMENT_MODE_LABELS: Record<MdmManagementMode, string> = {
+  dedicated: "Dedicated (shared/kiosk)",
+  fully_managed: "Fully managed (single user)",
+};
+
+export const MDM_COMPLIANCE_LABELS: Record<MdmComplianceState, { label: string; dotClass: string }> = {
+  compliant: { label: "Compliant", dotClass: "bg-emerald-500" },
+  noncompliant: { label: "Noncompliant", dotClass: "bg-red-500" },
+  unknown: { label: "Unknown", dotClass: "bg-neutral-400" },
 };
 
 export function last4(imei: string): string {

@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { CustodyTimeline } from "@/components/device/CustodyTimeline";
+import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { DEVICE_TIMELINE, getDeviceByImei, getHolderById, getSiteById } from "@/lib/mock-data";
 import { maskedImei } from "@/lib/codes";
 
@@ -45,6 +46,8 @@ export default async function DeviceDetailPage({
           )}
           {!holder && site && <p className="mt-1 text-sm text-neutral-700">{site.name}</p>}
         </div>
+
+        <MdmInfoCard imei={device.imei} mdm={device.mdm} />
 
         <div>
           <h2 className="mb-3 text-base font-semibold text-neutral-900">Custody history</h2>
