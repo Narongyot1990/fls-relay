@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# fls-relay
 
-## Getting Started
+Phone/device custody-tracking web app for FLS Transport — tracks who is holding which
+company phone, across sites, with role-based access for IT, site leads, ops
+supervisors, and management.
 
-First, run the development server:
+See [`phone-asset-management-spec.md`](./phone-asset-management-spec.md) and
+[`phone-asset-frontend-spec.md`](./phone-asset-frontend-spec.md) for the full
+product and UI specs.
+
+## Stack
+
+- Next.js 16 (App Router, Turbopack)
+- TypeScript, Tailwind CSS v4, shadcn/ui
+- MongoDB Atlas (via the official `mongodb` driver)
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local`
+with `MONGODB_URI` set — pull the production value with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+vercel env pull .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To seed sample data into a fresh database:
 
-## Learn More
+```bash
+node scripts/seed.mjs
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pushes to `main` auto-deploy to Vercel via the GitHub integration — no manual
+`vercel --prod` needed.
