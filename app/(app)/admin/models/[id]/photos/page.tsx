@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
+import { PhotoViewer } from "@/components/shared/PhotoViewer";
 import { useCurrentUser } from "@/lib/current-user";
 import { userAuthHeaders } from "@/lib/api-client";
 import { blobViewUrl } from "@/lib/blob";
@@ -21,6 +22,7 @@ export default function ModelPhotosPage() {
   const [uploading, setUploading] = useState(false);
   const [removingUrl, setRemovingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const loadModel = useCallback(() => {
     fetch("/api/models")
@@ -128,20 +130,22 @@ export default function ModelPhotosPage() {
             <p className="text-sm text-neutral-500">No photos yet.</p>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {model.images.map((img) => (
+              {model.images.map((img, i) => (
                 <div key={img.url} className="relative rounded-xl border border-neutral-200 bg-white p-2">
                   <button
                     type="button"
                     disabled={removingUrl === img.url}
                     onClick={() => handleRemove(img.url)}
                     aria-label="Remove photo"
-                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900/70 text-white disabled:opacity-40"
+                    className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900/70 text-white disabled:opacity-40"
                   >
                     <X className="h-4 w-4" />
                   </button>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- remote blob URL, not worth Next/Image config here */}
-                  <img src={blobViewUrl(img.url)} alt={img.description} className="h-28 w-full rounded-lg object-cover" />
-                  <p className="mt-1 truncate text-xs text-neutral-600">{img.description}</p>
+                  <button type="button" onClick={() => setViewerIndex(i)} className="block w-full text-left">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- remote blob URL, not worth Next/Image config here */}
+                    <img src={blobViewUrl(img.url)} alt={img.description} className="h-28 w-full rounded-lg object-cover" />
+                    <p className="mt-1 truncate text-xs text-neutral-600">{img.description}</p>
+                  </button>
                 </div>
               ))}
             </div>
@@ -173,6 +177,14 @@ export default function ModelPhotosPage() {
           </div>
         </div>
       </div>
+
+      {model && viewerIndex !== null && (
+        <PhotoViewer
+          images={model.images.map((img) => ({ url: blobViewUrl(img.url), description: img.description }))}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
     </RequireLevel>
   );
 }

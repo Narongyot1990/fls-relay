@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
+import { PhotoViewer } from "@/components/shared/PhotoViewer";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders, userAuthHeaders } from "@/lib/api-client";
 import { DEVICE_FIELD_CATALOG, describeField, type DeviceFieldCategory } from "@/lib/device-model-fields";
@@ -26,6 +27,7 @@ export default function NewModelPage() {
   const [pendingDescription, setPendingDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   function toggleField(key: string) {
     setFieldKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -169,13 +171,15 @@ export default function NewModelPage() {
                       type="button"
                       onClick={() => handleRemoveStagedImage(i)}
                       aria-label="Remove photo"
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900/70 text-white"
+                      className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900/70 text-white"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a static/remote asset Next can optimize */}
-                    <img src={img.previewUrl} alt={img.description} className="h-24 w-full rounded-lg object-cover" />
-                    <p className="mt-1 truncate text-xs text-neutral-600">{img.description}</p>
+                    <button type="button" onClick={() => setViewerIndex(i)} className="block w-full text-left">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a static/remote asset Next can optimize */}
+                      <img src={img.previewUrl} alt={img.description} className="h-24 w-full rounded-lg object-cover" />
+                      <p className="mt-1 truncate text-xs text-neutral-600">{img.description}</p>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -217,6 +221,14 @@ export default function NewModelPage() {
           </button>
         </div>
       </div>
+
+      {viewerIndex !== null && (
+        <PhotoViewer
+          images={stagedImages.map((img) => ({ url: img.previewUrl, description: img.description }))}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
     </RequireLevel>
   );
 }
