@@ -40,7 +40,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const pathname = `models/${id}/${Date.now()}-${crypto.randomUUID()}${ext}`;
 
   try {
-    const blob = await put(pathname, file, { access: "public" });
+    // The store has no public-access option (newly created Blob stores are
+    // private-only), so uploads go in private and are served back through
+    // /api/blob/view, which fetches with the server's token.
+    const blob = await put(pathname, file, { access: "private" });
     const model = await addModelImage(id, { url: blob.url, description: description.trim() });
     if (!model) return NextResponse.json({ error: "Model not found" }, { status: 404 });
     return NextResponse.json({ model }, { status: 201 });

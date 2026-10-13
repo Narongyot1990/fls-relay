@@ -6,6 +6,7 @@ import { ChevronLeft, X } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userAuthHeaders } from "@/lib/api-client";
+import { blobViewUrl } from "@/lib/blob";
 import type { DeviceModel } from "@/types";
 
 export default function ModelPhotosPage() {
@@ -139,7 +140,7 @@ export default function ModelPhotosPage() {
                     <X className="h-4 w-4" />
                   </button>
                   {/* eslint-disable-next-line @next/next/no-img-element -- remote blob URL, not worth Next/Image config here */}
-                  <img src={img.url} alt={img.description} className="h-28 w-full rounded-lg object-cover" />
+                  <img src={blobViewUrl(img.url)} alt={img.description} className="h-28 w-full rounded-lg object-cover" />
                   <p className="mt-1 truncate text-xs text-neutral-600">{img.description}</p>
                 </div>
               ))}

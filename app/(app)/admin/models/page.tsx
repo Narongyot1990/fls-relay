@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
 import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
+import { blobViewUrl } from "@/lib/blob";
 import type { DeviceModel } from "@/types";
 
 export default function ManageModelsPage() {
@@ -118,7 +119,7 @@ export default function ManageModelsPage() {
                       {m.images.length > 0 && (
                         // eslint-disable-next-line @next/next/no-img-element -- remote blob URL, not worth Next/Image config for a small list thumbnail
                         <img
-                          src={m.images[0].url}
+                          src={blobViewUrl(m.images[0].url)}
                           alt={m.images[0].description}
                           className="h-12 w-12 shrink-0 rounded-lg object-cover"
                         />
