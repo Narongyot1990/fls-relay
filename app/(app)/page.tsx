@@ -24,11 +24,6 @@ import {
   canHandleHandovers,
   canAccessAdmin,
 } from "@/lib/permissions";
-import {
-  OPEN_EXCEPTIONS_COUNT,
-  PENDING_FOR_ME,
-  UNACCOUNTED_DEVICES_COUNT,
-} from "@/lib/mock-data";
 import type { Device, Site } from "@/types";
 
 export default function HomePage() {
@@ -59,7 +54,11 @@ export default function HomePage() {
   }, [user.siteId]);
 
   const inStock = (devices ?? []).filter((d) => d.status === "in_site_stock").length;
-  const waitingCount = PENDING_FOR_ME.length;
+  // The transactions/exceptions ledger isn't wired up yet (see app/(app)/devices/[imei]/page.tsx) —
+  // these are genuinely 0 for now, not a placeholder standing in for a real count.
+  const waitingCount = 0;
+  const openExceptionsCount = 0;
+  const unaccountedDevicesCount = 0;
   const showSummaryStrip = canRunStockCount(user.level) || canApprove(user.level);
 
   return (
@@ -80,8 +79,8 @@ export default function HomePage() {
       {showSummaryStrip && (
         <div className="grid grid-cols-3 gap-2">
           <SummaryTile label="Pending" value={waitingCount} />
-          <SummaryTile label="Exceptions" value={OPEN_EXCEPTIONS_COUNT} />
-          <SummaryTile label="Unaccounted" value={UNACCOUNTED_DEVICES_COUNT} />
+          <SummaryTile label="Exceptions" value={openExceptionsCount} />
+          <SummaryTile label="Unaccounted" value={unaccountedDevicesCount} />
         </div>
       )}
 

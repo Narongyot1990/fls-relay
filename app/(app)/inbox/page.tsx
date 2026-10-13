@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Inbox } from "lucide-react";
 import { ConfirmCard } from "@/components/transaction/ConfirmCard";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { PENDING_FOR_ME } from "@/lib/mock-data";
 import type { PendingItem } from "@/types";
 
 export default function InboxPage() {
-  const [items, setItems] = useState<PendingItem[]>(PENDING_FOR_ME);
+  // Starts empty — the transactions ledger isn't wired up yet, so there is
+  // genuinely nothing pending, not a placeholder standing in for real data.
+  const [items, setItems] = useState<PendingItem[]>([]);
   const [toasts, setToasts] = useState<string[]>([]);
 
   function handleConfirm(id: string) {

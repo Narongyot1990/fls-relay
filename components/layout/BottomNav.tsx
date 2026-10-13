@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Inbox, Smartphone } from "lucide-react";
-import { PENDING_FOR_ME } from "@/lib/mock-data";
 
 export function BottomNav() {
   const pathname = usePathname();
 
+  // Inbox badge is 0 until the transactions ledger is wired up — see
+  // app/(app)/devices/[imei]/page.tsx's "Custody history" note.
   const items = [
     { href: "/", label: "Home", icon: Home, badge: 0 },
-    { href: "/inbox", label: "Inbox", icon: Inbox, badge: PENDING_FOR_ME.length },
+    { href: "/inbox", label: "Inbox", icon: Inbox, badge: 0 },
     { href: "/devices", label: "Phones", icon: Smartphone, badge: 0 },
   ];
 

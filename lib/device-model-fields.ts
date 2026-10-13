@@ -28,7 +28,7 @@ export const DEVICE_FIELD_CATALOG: DeviceFieldOption[] = [
     options: ["Single SIM", "Dual SIM", "eSIM"],
   },
   { key: "assetTag", label: "Asset tag / barcode", inputType: "text", placeholder: "Company asset sticker number" },
-  { key: "supplier", label: "Supplier", inputType: "text", placeholder: "e.g. Advice Rayong" },
+  { key: "supplier", label: "Supplier", inputType: "text", placeholder: "e.g. the vendor's name" },
   { key: "macAddress", label: "Wi-Fi MAC address", inputType: "text", placeholder: "AA:BB:CC:DD:EE:FF" },
   { key: "purchaseDate", label: "Purchase date", inputType: "date" },
   { key: "warrantyExpiry", label: "Warranty expiry", inputType: "date" },
