@@ -32,8 +32,9 @@ export function canExportReports(level: Level): boolean {
   return level === "L4";
 }
 
+/** Site leaders (L2) are scoped to their one site; every other role works across all sites. */
 export function canViewAllSites(level: Level): boolean {
-  return level === "L3" || level === "L4";
+  return level === "L1" || level === "L3" || level === "L4";
 }
 
 /** Sites a user may act on. Empty array from the user record means every site. */

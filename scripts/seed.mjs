@@ -36,6 +36,7 @@ const HOLDERS = [
   { employeeNo: "DRV-0219", type: "driver", name: "Anan Srisuk", siteCode: "RYG", phone: "081-000-0219", active: true },
   { employeeNo: "SL-0010", type: "site_leader", name: "Somsak Kaewmanee", siteCode: "RYG", phone: "081-111-0010", active: true },
   { employeeNo: "SL-0022", type: "site_leader", name: "Duangjai Thongdee", siteCode: "CBI", phone: "081-111-0022", active: true },
+  { employeeNo: "SL-0034", type: "site_leader", name: "Kittipong Wongsawat", siteCode: "LCB", phone: "081-111-0034", active: true },
 ];
 
 const DEVICES = [
