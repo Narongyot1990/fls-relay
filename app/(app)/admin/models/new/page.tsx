@@ -6,7 +6,9 @@ import { ChevronLeft } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
-import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
+import { DEVICE_FIELD_CATALOG, describeField, type DeviceFieldCategory } from "@/lib/device-model-fields";
+
+const CATEGORIES: DeviceFieldCategory[] = ["Procurement & identification", "Hardware & connectivity", "SIM & network"];
 
 export default function NewModelPage() {
   const router = useRouter();
@@ -70,23 +72,36 @@ export default function NewModelPage() {
             />
           </label>
 
-          <div>
-            <p className="mb-2 text-sm font-medium text-neutral-800">
+          <div className="flex flex-col gap-4">
+            <p className="text-sm font-medium text-neutral-800">
               Extra fields to collect when registering this model
             </p>
-            <div className="flex flex-col gap-2">
-              {DEVICE_FIELD_CATALOG.map((f) => (
-                <label key={f.key} className="flex items-center gap-2 text-sm text-neutral-700">
-                  <input
-                    type="checkbox"
-                    checked={fieldKeys.includes(f.key)}
-                    onChange={() => toggleField(f.key)}
-                    className="h-4 w-4 rounded border-neutral-300"
-                  />
-                  {f.label}
-                </label>
-              ))}
-            </div>
+            {CATEGORIES.map((category) => {
+              const fields = DEVICE_FIELD_CATALOG.filter((f) => f.category === category);
+              return (
+                <div key={category}>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    {category}
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    {fields.map((f) => (
+                      <label key={f.key} className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={fieldKeys.includes(f.key)}
+                          onChange={() => toggleField(f.key)}
+                          className="mt-0.5 h-4 w-4 rounded border-neutral-300"
+                        />
+                        <span>
+                          <span className="block text-sm text-neutral-800">{f.label}</span>
+                          <span className="block text-xs text-neutral-500">{describeField(f)}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
