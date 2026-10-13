@@ -30,12 +30,19 @@ export interface Site {
   active: boolean;
 }
 
+export interface ModelImage {
+  url: string;
+  /** Free text — what the photo shows (e.g. "Device front", "Charger", "SIM tray"). */
+  description: string;
+}
+
 export interface DeviceModel {
   id: string;
   name: string;
   active: boolean;
   /** Keys into DEVICE_FIELD_CATALOG (lib/device-model-fields.ts) this model collects at registration. */
   fieldKeys: string[];
+  images: ModelImage[];
 }
 
 export interface Holder {

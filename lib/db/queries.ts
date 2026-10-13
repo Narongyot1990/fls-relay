@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "./mongodb";
 import { deviceFromDoc, holderFromDoc, modelFromDoc, siteFromDoc } from "./mappers";
 import type { DeviceDoc, HolderDoc, ModelDoc, SiteDoc } from "./documents";
-import type { Device, DeviceMdmInfo, DeviceModel, DeviceStatus, Holder, Site } from "@/types";
+import type { Device, DeviceMdmInfo, DeviceModel, DeviceStatus, Holder, ModelImage, Site } from "@/types";
 
 async function sitesCollection() {
   return (await getDb()).collection<SiteDoc>("sites");
@@ -115,6 +115,20 @@ export async function deleteModel(id: string): Promise<{ deleted: boolean; devic
   if (devices > 0) return { deleted: false, devices };
   await (await modelsCollection()).deleteOne({ _id: new ObjectId(id) });
   return { deleted: true, devices: 0 };
+}
+
+export async function addModelImage(id: string, image: ModelImage): Promise<DeviceModel | null> {
+  const collection = await modelsCollection();
+  await collection.updateOne({ _id: new ObjectId(id) }, { $push: { images: image } });
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return doc ? modelFromDoc(doc) : null;
+}
+
+export async function removeModelImage(id: string, url: string): Promise<DeviceModel | null> {
+  const collection = await modelsCollection();
+  await collection.updateOne({ _id: new ObjectId(id) }, { $pull: { images: { url } } });
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return doc ? modelFromDoc(doc) : null;
 }
 
 export interface CreateModelInput {

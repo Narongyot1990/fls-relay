@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import type { DeviceMdmInfo, DeviceStatus } from "@/types";
+import type { DeviceMdmInfo, DeviceStatus, ModelImage } from "@/types";
 
 export interface SiteDoc {
   _id: ObjectId;
@@ -13,6 +13,7 @@ export interface ModelDoc {
   name: string;
   active: boolean;
   fieldKeys: string[];
+  images?: ModelImage[];
 }
 
 export interface HolderDoc {

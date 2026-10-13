@@ -13,3 +13,11 @@ export function userHeaders(user: CurrentUser): HeadersInit {
     "X-User-Id": user.id,
   };
 }
+
+/** Same role headers, without Content-Type — for FormData uploads, where the browser must set its own multipart boundary. */
+export function userAuthHeaders(user: CurrentUser): HeadersInit {
+  return {
+    "X-User-Level": user.level,
+    "X-User-Id": user.id,
+  };
+}

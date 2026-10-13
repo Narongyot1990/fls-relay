@@ -16,6 +16,7 @@ export function modelFromDoc(doc: ModelDoc): DeviceModel {
     name: doc.name,
     active: doc.active,
     fieldKeys: doc.fieldKeys,
+    images: doc.images ?? [],
   };
 }
 

@@ -114,19 +114,35 @@ export default function ManageModelsPage() {
               {(models ?? []).map((m) => (
                 <div key={m.id} className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-medium text-neutral-900">{m.name}</p>
-                      <p className="mt-0.5 truncate text-sm text-neutral-500">
-                        <span className={m.active ? "text-emerald-600" : "text-neutral-400"}>
-                          {m.active ? "Active" : "Inactive"}
-                        </span>
-                        {m.fieldKeys.length > 0 &&
-                          ` · ${m.fieldKeys
-                            .map((k) => DEVICE_FIELD_CATALOG.find((f) => f.key === k)?.label ?? k)
-                            .join(", ")}`}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      {m.images.length > 0 && (
+                        // eslint-disable-next-line @next/next/no-img-element -- remote blob URL, not worth Next/Image config for a small list thumbnail
+                        <img
+                          src={m.images[0].url}
+                          alt={m.images[0].description}
+                          className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-medium text-neutral-900">{m.name}</p>
+                        <p className="mt-0.5 truncate text-sm text-neutral-500">
+                          <span className={m.active ? "text-emerald-600" : "text-neutral-400"}>
+                            {m.active ? "Active" : "Inactive"}
+                          </span>
+                          {m.fieldKeys.length > 0 &&
+                            ` · ${m.fieldKeys
+                              .map((k) => DEVICE_FIELD_CATALOG.find((f) => f.key === k)?.label ?? k)
+                              .join(", ")}`}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex shrink-0 gap-2">
+                      <Link
+                        href={`/admin/models/${m.id}/photos`}
+                        className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                      >
+                        Photos{m.images.length > 0 ? ` (${m.images.length})` : ""}
+                      </Link>
                       <button
                         type="button"
                         disabled={busyId === m.id}
