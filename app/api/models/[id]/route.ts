@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteModel, setModelActive } from "@/lib/db/queries";
-import { canManageCatalog } from "@/lib/permissions";
+import { canManageModels } from "@/lib/permissions";
 import type { Level } from "@/types";
 
 /**
@@ -11,7 +11,7 @@ import type { Level } from "@/types";
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const level = request.headers.get("x-user-level") as Level | null;
-  if (!level || !canManageCatalog(level)) {
+  if (!level || !canManageModels(level)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -28,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const level = request.headers.get("x-user-level") as Level | null;
-  if (!level || !canManageCatalog(level)) {
+  if (!level || !canManageModels(level)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

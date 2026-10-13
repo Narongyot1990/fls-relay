@@ -6,7 +6,7 @@ import { Search, Smartphone, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useCurrentUser } from "@/lib/current-user";
-import { canViewAllSites } from "@/lib/permissions";
+import { canViewAllSites, sitesInScope } from "@/lib/permissions";
 import { last4 } from "@/lib/codes";
 import type { Device, DeviceStatus, Holder, Site } from "@/types";
 
@@ -22,30 +22,38 @@ const STATUS_FILTERS: { key: DeviceStatus | "all"; label: string }[] = [
 export default function DevicesPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<DeviceStatus | "all">("all");
+  const [activeSiteId, setActiveSiteId] = useState<string>("all");
   const { user } = useCurrentUser();
-  const showAllSites = canViewAllSites(user.level);
+  const canFilterBySite = canViewAllSites(user.level);
+  const scope = sitesInScope(user);
 
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [holders, setHolders] = useState<Holder[]>([]);
-  const [sites, setSites] = useState<Site[]>([]);
+  const [allSites, setAllSites] = useState<Site[]>([]);
   const [error, setError] = useState(false);
+
+  const scopedSites = useMemo(
+    () => (scope === "all" ? allSites : allSites.filter((s) => scope.includes(s.id))),
+    [allSites, scope],
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    const devicesUrl = showAllSites ? "/api/devices" : `/api/devices?siteId=${user.siteId}`;
+    const siteParam = canFilterBySite ? (activeSiteId === "all" ? undefined : activeSiteId) : user.siteId ?? undefined;
+    const devicesUrl = siteParam ? `/api/devices?siteId=${siteParam}` : "/api/devices";
 
     Promise.all([
       fetch(devicesUrl).then((r) => r.json()),
       fetch("/api/holders").then((r) => r.json()),
-      showAllSites ? fetch("/api/sites").then((r) => r.json()) : Promise.resolve({ sites: [] }),
+      canFilterBySite ? fetch("/api/sites?activeOnly=1").then((r) => r.json()) : Promise.resolve({ sites: [] }),
     ])
       .then(([devicesRes, holdersRes, sitesRes]) => {
         if (cancelled) return;
         setError(false);
         setDevices(devicesRes.devices ?? []);
         setHolders(holdersRes.holders ?? []);
-        setSites(sitesRes.sites ?? []);
+        setAllSites(sitesRes.sites ?? []);
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -54,7 +62,7 @@ export default function DevicesPage() {
     return () => {
       cancelled = true;
     };
-  }, [showAllSites, user.siteId]);
+  }, [canFilterBySite, activeSiteId, user.siteId]);
 
   const statusCounts = useMemo(() => {
     const counts: Partial<Record<DeviceStatus, number>> = {};
@@ -67,7 +75,7 @@ export default function DevicesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return true;
     const holder = holders.find((h) => h.id === d.currentHolderId);
-    const site = sites.find((s) => s.id === d.currentSiteId);
+    const site = allSites.find((s) => s.id === d.currentSiteId);
     return (
       last4(d.imei).includes(q) ||
       d.model.toLowerCase().includes(q) ||
@@ -81,12 +89,27 @@ export default function DevicesPage() {
     <div className="flex flex-col gap-4 px-4 py-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-neutral-900">
-          {showAllSites ? "All phones" : "Phones at my site"}
+          {canFilterBySite ? "All phones" : "Phones at my site"}
         </h1>
         <span className="text-sm text-neutral-500">
           {devices !== null && `${filtered.length} of ${devices.length}`}
         </span>
       </div>
+
+      {canFilterBySite && (
+        <select
+          value={activeSiteId}
+          onChange={(e) => setActiveSiteId(e.target.value)}
+          className="min-h-[44px] rounded-xl border border-neutral-300 bg-white px-3 text-sm"
+        >
+          <option value="all">All sites</option>
+          {scopedSites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      )}
 
       <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3">
         <Search className="h-5 w-5 text-neutral-400" />
@@ -130,7 +153,7 @@ export default function DevicesPage() {
         <div className="flex flex-col gap-2">
           {filtered.map((device) => {
             const holder = holders.find((h) => h.id === device.currentHolderId);
-            const site = sites.find((s) => s.id === device.currentSiteId);
+            const site = allSites.find((s) => s.id === device.currentSiteId);
             return (
               <Link
                 key={device.id}
@@ -141,7 +164,7 @@ export default function DevicesPage() {
                   <p className="truncate text-base font-medium text-neutral-900">{device.model}</p>
                   <p className="mt-0.5 truncate text-sm text-neutral-500">
                     {holder ? holder.name : "Unassigned"}
-                    {showAllSites && site ? ` · ${site.name}` : ""}
+                    {canFilterBySite && site ? ` · ${site.name}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

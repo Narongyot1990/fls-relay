@@ -97,7 +97,7 @@ export default function ManageSitesPage() {
   }
 
   return (
-    <RequireLevel allow={["L1"]}>
+    <RequireLevel allow={["L1", "L4"]}>
       <div className="flex flex-col">
         <div className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3">
           <button

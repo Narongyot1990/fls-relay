@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createModel, listModels } from "@/lib/db/queries";
-import { canManageCatalog } from "@/lib/permissions";
+import { canManageModels } from "@/lib/permissions";
 import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
 import type { Level } from "@/types";
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const level = request.headers.get("x-user-level") as Level | null;
-  if (!level || !canManageCatalog(level)) {
+  if (!level || !canManageModels(level)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

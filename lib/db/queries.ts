@@ -136,8 +136,17 @@ export async function createModel(input: CreateModelInput): Promise<DeviceModel>
   return modelFromDoc(doc);
 }
 
-export async function listHolders(filter: { siteId?: string; type?: Holder["type"] } = {}): Promise<Holder[]> {
-  const query: Record<string, unknown> = { active: true };
+/**
+ * Default is active-only (opposite default from listSites/listModels' activeOnly flag) —
+ * hand-out/take-back/swap pickers and the dynamic role-switcher all rely on separated/
+ * deactivated staff staying out of the result by default. Only the admin page passes
+ * includeInactive: true, so it can see rows to reactivate them.
+ */
+export async function listHolders(
+  filter: { siteId?: string; type?: Holder["type"]; includeInactive?: boolean } = {},
+): Promise<Holder[]> {
+  const query: Record<string, unknown> = {};
+  if (!filter.includeInactive) query.active = true;
   if (filter.siteId) query.siteId = new ObjectId(filter.siteId);
   if (filter.type) query.type = filter.type;
   const docs = await (await holdersCollection()).find(query).sort({ name: 1 }).toArray();
@@ -147,6 +156,57 @@ export async function listHolders(filter: { siteId?: string; type?: Holder["type
 export async function getHolderById(id: string): Promise<Holder | null> {
   const doc = await (await holdersCollection()).findOne({ _id: new ObjectId(id) });
   return doc ? holderFromDoc(doc) : null;
+}
+
+export interface CreateHolderInput {
+  type: Holder["type"];
+  name: string;
+  employeeNo: string;
+  siteId: string;
+  phone: string;
+}
+
+export async function createHolder(input: CreateHolderInput): Promise<Holder> {
+  const collection = await holdersCollection();
+  await collection.createIndex({ employeeNo: 1 }, { unique: true });
+
+  const doc: HolderDoc = {
+    _id: new ObjectId(),
+    type: input.type,
+    name: input.name.trim(),
+    employeeNo: input.employeeNo.trim(),
+    siteId: new ObjectId(input.siteId),
+    phone: input.phone.trim(),
+    active: true,
+  };
+  await collection.insertOne(doc);
+  return holderFromDoc(doc);
+}
+
+/** Counts devices currently assigned to this holder, so deactivate/delete can refuse to orphan the custody link. */
+export async function countHolderReferences(holderId: string): Promise<number> {
+  return (await devicesCollection()).countDocuments({ currentHolderId: new ObjectId(holderId) });
+}
+
+export async function setHolderActive(
+  id: string,
+  active: boolean,
+): Promise<{ holder: Holder | null; blockedDevices: number }> {
+  if (!active) {
+    const blockedDevices = await countHolderReferences(id);
+    if (blockedDevices > 0) return { holder: null, blockedDevices };
+  }
+  const collection = await holdersCollection();
+  await collection.updateOne({ _id: new ObjectId(id) }, { $set: { active } });
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return { holder: doc ? holderFromDoc(doc) : null, blockedDevices: 0 };
+}
+
+export async function deleteHolder(id: string): Promise<{ deleted: boolean; devices: number }> {
+  const devices = await countHolderReferences(id);
+  if (devices > 0) return { deleted: false, devices };
+  await (await holdersCollection()).deleteOne({ _id: new ObjectId(id) });
+  return { deleted: true, devices: 0 };
 }
 
 export async function listDevices(filter: { siteId?: string; status?: DeviceStatus } = {}): Promise<Device[]> {
@@ -196,4 +256,29 @@ export async function updateDeviceMdm(imei: string, mdm: DeviceMdmInfo): Promise
   await collection.updateOne({ imei }, { $set: { mdm } });
   const doc = await collection.findOne({ imei });
   return doc ? deviceFromDoc(doc) : null;
+}
+
+/**
+ * Hard delete — only for undoing a pure mis-registration (never touched since
+ * creation). Anything with real custody history must be retired, never deleted,
+ * per the spec's "never delete historical records" principle.
+ */
+export async function deleteDevice(imei: string): Promise<{ deleted: boolean }> {
+  const collection = await devicesCollection();
+  const result = await collection.deleteOne({ imei, status: "registered", currentHolderId: null });
+  return { deleted: result.deletedCount > 0 };
+}
+
+/**
+ * Soft, terminal lifecycle action. Matches the spec's state-machine table exactly:
+ * retire is only reachable from in_site_stock or returned, never from assigned
+ * (the device must be taken back first).
+ */
+export async function retireDevice(imei: string): Promise<{ retired: boolean }> {
+  const collection = await devicesCollection();
+  const result = await collection.updateOne(
+    { imei, status: { $in: ["in_site_stock", "returned"] } },
+    { $set: { status: "retired" } },
+  );
+  return { retired: result.modifiedCount > 0 };
 }

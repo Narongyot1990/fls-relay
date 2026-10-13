@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSite, listSites } from "@/lib/db/queries";
-import { canManageCatalog } from "@/lib/permissions";
+import { canManageSites } from "@/lib/permissions";
 import type { Level } from "@/types";
 
 export async function GET(request: Request) {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const level = request.headers.get("x-user-level") as Level | null;
-  if (!level || !canManageCatalog(level)) {
+  if (!level || !canManageSites(level)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -22,7 +22,7 @@ import {
   canExportReports,
   canRegisterDevices,
   canHandleHandovers,
-  canManageCatalog,
+  canAccessAdmin,
 } from "@/lib/permissions";
 import {
   OPEN_EXCEPTIONS_COUNT,
@@ -34,18 +34,23 @@ import type { Device, Site } from "@/types";
 export default function HomePage() {
   const { user } = useCurrentUser();
   const [site, setSite] = useState<Site | null>(null);
-  const [siteDevices, setSiteDevices] = useState<Device[] | null>(null);
+  const [siteCount, setSiteCount] = useState<number | null>(null);
+  const [devices, setDevices] = useState<Device[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    const devicesUrl = user.siteId ? `/api/devices?siteId=${user.siteId}` : "/api/devices";
+
     Promise.all([
       fetch("/api/sites").then((r) => r.json()),
-      fetch(`/api/devices?siteId=${user.siteId}`).then((r) => r.json()),
+      fetch(devicesUrl).then((r) => r.json()),
     ]).then(([sitesRes, devicesRes]) => {
       if (cancelled) return;
-      setSite((sitesRes.sites ?? []).find((s: Site) => s.id === user.siteId) ?? null);
-      setSiteDevices(devicesRes.devices ?? []);
+      const sites: Site[] = sitesRes.sites ?? [];
+      setSite(user.siteId ? sites.find((s) => s.id === user.siteId) ?? null : null);
+      setSiteCount(sites.length);
+      setDevices(devicesRes.devices ?? []);
     });
 
     return () => {
@@ -53,16 +58,22 @@ export default function HomePage() {
     };
   }, [user.siteId]);
 
-  const inStock = (siteDevices ?? []).filter((d) => d.status === "in_site_stock").length;
+  const inStock = (devices ?? []).filter((d) => d.status === "in_site_stock").length;
   const waitingCount = PENDING_FOR_ME.length;
   const showSummaryStrip = canRunStockCount(user.level) || canApprove(user.level);
 
   return (
     <div className="flex flex-col gap-4 px-4 py-5">
       <div>
-        <h1 className="text-xl font-semibold text-neutral-900">{site?.name ?? " "}</h1>
+        <h1 className="text-xl font-semibold text-neutral-900">
+          {user.siteId ? site?.name ?? " " : "All sites"}
+        </h1>
         <p className="text-sm text-neutral-500">
-          {siteDevices === null ? "Loading…" : `${siteDevices.length} phones · ${inStock} in stock`}
+          {devices === null
+            ? "Loading…"
+            : user.siteId
+              ? `${devices.length} phones · ${inStock} in stock`
+              : `${devices.length} phones across ${siteCount ?? 0} sites · ${inStock} in stock`}
         </p>
       </div>
 
@@ -107,10 +118,10 @@ export default function HomePage() {
         )}
       </div>
 
-      {canManageCatalog(user.level) && (
+      {canAccessAdmin(user.level) && (
         <div className="mt-2 flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Admin</p>
-          <ActionButton href="/admin" icon={Settings} label="Manage sites & models" />
+          <ActionButton href="/admin" icon={Settings} label="Manage sites, people & models" />
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, Smartphone } from "lucide-react";
+import { ChevronLeft, MapPin, Smartphone, Users } from "lucide-react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 
@@ -9,7 +9,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   return (
-    <RequireLevel allow={["L1"]}>
+    <RequireLevel allow={["L1", "L4"]}>
       <div className="flex flex-col">
         <div className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3">
           <button
@@ -25,6 +25,7 @@ export default function AdminPage() {
 
         <div className="flex flex-col gap-3 px-4 py-5">
           <ActionButton href="/admin/sites" icon={MapPin} label="Manage sites" />
+          <ActionButton href="/admin/holders" icon={Users} label="Manage people" />
           <ActionButton href="/admin/models" icon={Smartphone} label="Manage phone models" />
         </div>
       </div>

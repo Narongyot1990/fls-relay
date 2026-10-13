@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { StepHeader } from "@/components/transaction/StepHeader";
 import { DevicePicker } from "@/components/device/DevicePicker";
 import { ConditionGrade } from "@/components/transaction/ConditionGrade";
@@ -46,6 +47,22 @@ export default function SwapPage() {
 
   const availableStock = stock.filter((d) => d.id !== outgoing?.id);
   const holder = outgoing ? holders.find((h) => h.id === outgoing.currentHolderId) : undefined;
+
+  if (user.siteId === null) {
+    return (
+      <RequireLevel allow={[...ALLOWED_LEVELS]}>
+        <EmptyState
+          icon={MapPin}
+          message="This is a per-site task — preview as a Site Leader to try it."
+          action={
+            <Link href="/" className="text-sm font-medium text-neutral-900 underline">
+              Back to home
+            </Link>
+          }
+        />
+      </RequireLevel>
+    );
+  }
 
   function goBack() {
     if (step === 1) router.push("/");

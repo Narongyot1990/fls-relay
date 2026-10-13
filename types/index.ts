@@ -126,7 +126,13 @@ export interface CurrentUser {
   id: string;
   name: string;
   level: Level;
-  siteId: string;
-  /** Sites this user can act on. Empty means every site (L4, and L1 who isn't site-bound). */
+  /**
+   * The one site this user's home/handover screens default to acting on. Null for
+   * roles that aren't bound to a single site (IT, Ops Supervisor, Management) —
+   * UI convenience only. `scopedSiteIds` is the actual authorization/visibility
+   * signal; don't derive access decisions from `siteId === null`.
+   */
+  siteId: string | null;
+  /** Sites this user can act on. Empty means every site (L4, and L1/L3 who aren't site-bound). */
   scopedSiteIds: string[];
 }

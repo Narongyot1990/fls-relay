@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
+import { DeviceActions } from "@/components/device/DeviceActions";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 import { fieldByKey } from "@/lib/device-model-fields";
@@ -68,6 +69,8 @@ export default async function DeviceDetailPage({
             No recorded history yet — the transaction ledger isn&apos;t wired up yet.
           </p>
         </div>
+
+        <DeviceActions imei={device.imei} status={device.status} hasHolder={device.currentHolderId !== null} />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useSyncExternalStore, type ReactNode } from "react";
 import type { CurrentUser } from "@/types";
-import { DEFAULT_USER_ID, MOCK_USERS } from "@/lib/mock-data";
+import { DEFAULT_USER_ID, META_USERS } from "@/lib/mock-data";
 
 const STORAGE_KEY = "fls-relay:preview-user-id";
 const CHANGE_EVENT = "fls-relay:preview-user-changed";
@@ -15,8 +15,8 @@ interface CurrentUserContextValue {
 
 const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
 
-function findUser(id: string): CurrentUser {
-  return MOCK_USERS.find((u) => u.id === id) ?? MOCK_USERS.find((u) => u.id === DEFAULT_USER_ID)!;
+function findUser(id: string, users: CurrentUser[]): CurrentUser {
+  return users.find((u) => u.id === id) ?? users.find((u) => u.id === DEFAULT_USER_ID) ?? users[0];
 }
 
 function subscribe(callback: () => void) {
@@ -40,8 +40,19 @@ function getServerSnapshot(): string {
   return DEFAULT_USER_ID;
 }
 
-export function CurrentUserProvider({ children }: { children: ReactNode }) {
+interface CurrentUserProviderProps {
+  children: ReactNode;
+  /**
+   * Site Leader preview identities, resolved server-side from real `site_leader`
+   * holders (see app/(app)/layout.tsx) — not hardcoded, since a static file can't
+   * know a future, admin-created site's id. Empty until at least one exists.
+   */
+  dynamicUsers?: CurrentUser[];
+}
+
+export function CurrentUserProvider({ children, dynamicUsers = [] }: CurrentUserProviderProps) {
   const storedId = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const users = [...META_USERS, ...dynamicUsers];
 
   function handleSetUserId(id: string) {
     try {
@@ -54,7 +65,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
   return (
     <CurrentUserContext.Provider
-      value={{ user: findUser(storedId), setUserId: handleSetUserId, users: MOCK_USERS }}
+      value={{ user: findUser(storedId, users), setUserId: handleSetUserId, users }}
     >
       {children}
     </CurrentUserContext.Provider>
