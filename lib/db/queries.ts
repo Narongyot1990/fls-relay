@@ -223,10 +223,13 @@ export async function deleteHolder(id: string): Promise<{ deleted: boolean; devi
   return { deleted: true, devices: 0 };
 }
 
-export async function listDevices(filter: { siteId?: string; status?: DeviceStatus } = {}): Promise<Device[]> {
+export async function listDevices(
+  filter: { siteId?: string; status?: DeviceStatus; holderId?: string } = {},
+): Promise<Device[]> {
   const query: Record<string, unknown> = { active: true };
   if (filter.siteId) query.currentSiteId = new ObjectId(filter.siteId);
   if (filter.status) query.status = filter.status;
+  if (filter.holderId) query.currentHolderId = new ObjectId(filter.holderId);
   const docs = await (await devicesCollection()).find(query).sort({ model: 1 }).toArray();
   return docs.map(deviceFromDoc);
 }

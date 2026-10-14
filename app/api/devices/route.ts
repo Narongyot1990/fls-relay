@@ -7,12 +7,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const siteId = searchParams.get("siteId") ?? undefined;
   const status = (searchParams.get("status") as DeviceStatus | null) ?? undefined;
+  const holderId = searchParams.get("holderId") ?? undefined;
 
   try {
-    const devices = await listDevices({ siteId, status });
+    const devices = await listDevices({ siteId, status, holderId });
     return NextResponse.json({ devices });
   } catch {
-    return NextResponse.json({ error: "Invalid siteId" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid siteId or holderId" }, { status: 400 });
   }
 }
 
