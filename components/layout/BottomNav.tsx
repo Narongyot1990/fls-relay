@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Inbox, Smartphone } from "lucide-react";
+import { usePendingTransactions } from "@/lib/use-pending-transactions";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { items: pendingItems } = usePendingTransactions();
+  const inboxBadge = pendingItems?.length ?? 0;
 
-  // Inbox badge is 0 until the transactions ledger is wired up — see
-  // app/(app)/devices/[imei]/page.tsx's "Custody history" note.
   const items = [
     { href: "/", label: "Home", icon: Home, badge: 0 },
-    { href: "/inbox", label: "Inbox", icon: Inbox, badge: 0 },
+    { href: "/inbox", label: "Inbox", icon: Inbox, badge: inboxBadge },
     { href: "/devices", label: "Phones", icon: Smartphone, badge: 0 },
   ];
 

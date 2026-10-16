@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ActionButton } from "@/components/shared/ActionButton";
 import { useCurrentUser } from "@/lib/current-user";
+import { usePendingTransactions } from "@/lib/use-pending-transactions";
 import {
   canRunStockCount,
   canApprove,
@@ -53,10 +54,11 @@ export default function HomePage() {
     };
   }, [user.siteId]);
 
+  const { items: pendingItems } = usePendingTransactions();
+
   const inStock = (devices ?? []).filter((d) => d.status === "in_site_stock").length;
-  // The transactions/exceptions ledger isn't wired up yet (see app/(app)/devices/[imei]/page.tsx) —
-  // these are genuinely 0 for now, not a placeholder standing in for a real count.
-  const waitingCount = 0;
+  const waitingCount = pendingItems?.length ?? 0;
+  // Exceptions/unaccounted still have no backing collection — genuinely 0, not a placeholder.
   const openExceptionsCount = 0;
   const unaccountedDevicesCount = 0;
   const showSummaryStrip = canRunStockCount(user.level) || canApprove(user.level);

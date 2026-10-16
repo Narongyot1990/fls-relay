@@ -8,14 +8,12 @@ import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
 import { DEVICE_FIELD_CATALOG } from "@/lib/device-model-fields";
-import type { DeviceModel, Site } from "@/types";
+import type { DeviceModel } from "@/types";
 
 export default function RegisterDevicePage() {
   const router = useRouter();
   const { user } = useCurrentUser();
-  const [sites, setSites] = useState<Site[]>([]);
   const [models, setModels] = useState<DeviceModel[]>([]);
-  const [siteId, setSiteId] = useState("");
   const [modelName, setModelName] = useState("");
   const [serial, setSerial] = useState("");
   const [imei, setImei] = useState("");
@@ -26,12 +24,6 @@ export default function RegisterDevicePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/sites?activeOnly=1")
-      .then((r) => r.json())
-      .then((data) => {
-        setSites(data.sites ?? []);
-        setSiteId((prev) => prev || data.sites?.[0]?.id || "");
-      });
     fetch("/api/models?activeOnly=1")
       .then((r) => r.json())
       .then((data) => {
@@ -47,17 +39,15 @@ export default function RegisterDevicePage() {
   }
 
   const missingReason =
-    siteId === ""
-      ? "Select a site"
-      : modelName.trim() === ""
-        ? "Select a model"
-        : serial.trim() === ""
-          ? "Enter the serial number"
-          : imei.trim().length < 6
-            ? "Enter a valid IMEI"
-            : phoneNumber.trim() === ""
-              ? "Enter the phone number"
-              : null;
+    modelName.trim() === ""
+      ? "Select a model"
+      : serial.trim() === ""
+        ? "Enter the serial number"
+        : imei.trim().length < 6
+          ? "Enter a valid IMEI"
+          : phoneNumber.trim() === ""
+            ? "Enter the phone number"
+            : null;
 
   const canSubmit = !submitting && missingReason === null;
 
@@ -73,7 +63,6 @@ export default function RegisterDevicePage() {
           serial,
           model: modelName,
           phoneNumber,
-          siteId,
           customFields,
         }),
       });
@@ -99,7 +88,10 @@ export default function RegisterDevicePage() {
           </span>
           <div>
             <p className="text-lg font-semibold text-neutral-900">Device registered</p>
-            <p className="mt-1 text-sm text-neutral-600">{modelName} is now in the register</p>
+            <p className="mt-1 text-sm text-neutral-600">
+              {modelName} is in the register, not yet at a site — an Ops Supervisor or Management
+              will issue it to one.
+            </p>
           </div>
           <Link
             href="/"
@@ -131,21 +123,6 @@ export default function RegisterDevicePage() {
         </div>
 
         <div className="flex flex-col gap-4 px-4 py-5">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-neutral-800">Site</span>
-            <select
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
-            >
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-neutral-800">Model</span>
             {models.length > 0 ? (

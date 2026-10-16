@@ -21,11 +21,8 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { siteId, rows } = body ?? {};
+  const { rows } = body ?? {};
 
-  if (!siteId || typeof siteId !== "string") {
-    return NextResponse.json({ error: "siteId is required" }, { status: 400 });
-  }
   if (!Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ error: "At least one row is required" }, { status: 400 });
   }
@@ -42,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await importDevices(siteId, cleanRows);
+    const result = await importDevices(cleanRows);
     return NextResponse.json(result, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Could not import devices" }, { status: 400 });

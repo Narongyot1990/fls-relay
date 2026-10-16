@@ -30,9 +30,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { imei, serial, model, phoneNumber, siteId, customFields } = body ?? {};
+  const { imei, serial, model, phoneNumber, customFields } = body ?? {};
 
-  if (!imei || !serial || !model || !phoneNumber || !siteId) {
+  if (!imei || !serial || !model || !phoneNumber) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       : {};
 
   try {
-    const device = await createDevice({ imei, serial, model, phoneNumber, siteId, customFields: safeCustomFields });
+    const device = await createDevice({ imei, serial, model, phoneNumber, customFields: safeCustomFields });
     return NextResponse.json({ device }, { status: 201 });
   } catch (err) {
     if (err instanceof Error && err.message.includes("E11000")) {

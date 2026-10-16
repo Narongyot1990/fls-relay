@@ -70,3 +70,18 @@ export function isSiteInScope(user: CurrentUser, siteId: string): boolean {
   const scope = sitesInScope(user);
   return scope === "all" || scope.includes(siteId);
 }
+
+/** Decides which site an unassigned device goes to (T1 "Issue to Site") — matches spec's "L3 ... transfer between sites". */
+export function canIssueToSite(level: Level): boolean {
+  return level === "L3" || level === "L4";
+}
+
+/**
+ * Confirms receipt of a T1 — the destination site's own leader, or Management.
+ * L3 is deliberately excluded: they're the sender here, and two-sided
+ * confirmation requires the receiver to be someone else.
+ */
+export function canConfirmIssue(user: CurrentUser, toSiteId: string): boolean {
+  if (user.level === "L4") return true;
+  return user.level === "L2" && isSiteInScope(user, toSiteId);
+}

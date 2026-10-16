@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/device/StatusBadge";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { DeviceActions } from "@/components/device/DeviceActions";
 import { DeviceInfoEditLink } from "@/components/device/DeviceInfoEditLink";
+import { DeviceIssueLink } from "@/components/device/DeviceIssueLink";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 import { fieldByKey } from "@/lib/device-model-fields";
@@ -19,7 +20,7 @@ export default async function DeviceDetailPage({
   if (!device) notFound();
 
   const holder = device.currentHolderId ? await getHolderById(device.currentHolderId) : null;
-  const site = await getSiteById(device.currentSiteId);
+  const site = device.currentSiteId ? await getSiteById(device.currentSiteId) : null;
 
   return (
     <div className="flex flex-col">
@@ -49,6 +50,7 @@ export default async function DeviceDetailPage({
             </p>
           )}
           {!holder && site && <p className="mt-1 text-sm text-neutral-700">{site.name}</p>}
+          {!site && <p className="mt-1 text-sm text-neutral-500">Not yet assigned to a site</p>}
         </div>
 
         <MdmInfoCard imei={device.imei} mdm={device.mdm} />
@@ -73,6 +75,8 @@ export default async function DeviceDetailPage({
             No recorded history yet — the transaction ledger isn&apos;t wired up yet.
           </p>
         </div>
+
+        <DeviceIssueLink imei={device.imei} status={device.status} hasSite={device.currentSiteId !== null} />
 
         <DeviceActions imei={device.imei} status={device.status} hasHolder={device.currentHolderId !== null} />
       </div>

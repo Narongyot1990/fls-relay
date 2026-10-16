@@ -8,7 +8,7 @@ import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
 import { parseCsv, findColumn, type ParsedCsv } from "@/lib/csv";
-import type { DeviceModel, Site } from "@/types";
+import type { DeviceModel } from "@/types";
 
 interface ImportResult {
   created: { id: string }[];
@@ -18,9 +18,7 @@ interface ImportResult {
 export default function ImportDevicesPage() {
   const router = useRouter();
   const { user } = useCurrentUser();
-  const [sites, setSites] = useState<Site[]>([]);
   const [models, setModels] = useState<DeviceModel[]>([]);
-  const [siteId, setSiteId] = useState("");
 
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -34,12 +32,6 @@ export default function ImportDevicesPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   useEffect(() => {
-    fetch("/api/sites?activeOnly=1")
-      .then((r) => r.json())
-      .then((data) => {
-        setSites(data.sites ?? []);
-        setSiteId((prev) => prev || data.sites?.[0]?.id || "");
-      });
     fetch("/api/models?activeOnly=1")
       .then((r) => r.json())
       .then((data) => setModels(data.models ?? []));
@@ -89,7 +81,7 @@ export default function ImportDevicesPage() {
   const skippedCount = mappedRows.length - readyRows.length;
 
   async function handleSubmit() {
-    if (!siteId || readyRows.length === 0) return;
+    if (readyRows.length === 0) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -97,7 +89,6 @@ export default function ImportDevicesPage() {
         method: "POST",
         headers: userHeaders(user),
         body: JSON.stringify({
-          siteId,
           rows: readyRows.map((r) => ({ serial: r.serial, model: r.mappedModel })),
         }),
       });
@@ -124,8 +115,9 @@ export default function ImportDevicesPage() {
           <div>
             <p className="text-lg font-semibold text-neutral-900">{result.created.length} device(s) imported</p>
             <p className="mt-1 text-sm text-neutral-600">
-              They&apos;re registered with a placeholder IMEI — edit each one to fill in the real IMEI
-              and phone number.
+              They&apos;re registered with a placeholder IMEI and no site yet — edit each one to fill
+              in the real IMEI and phone number, then an Ops Supervisor or Management can issue it
+              to a site.
             </p>
           </div>
 
@@ -171,21 +163,6 @@ export default function ImportDevicesPage() {
             For MDM export files with no IMEI or phone number yet — devices are created with a
             placeholder IMEI you fill in later, one at a time.
           </p>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-neutral-800">Site (applies to the whole file)</span>
-            <select
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              className="min-h-[48px] rounded-xl border border-neutral-300 bg-white px-3 text-base"
-            >
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-neutral-800">CSV file</span>
@@ -255,7 +232,7 @@ export default function ImportDevicesPage() {
 
               <button
                 type="button"
-                disabled={submitting || !siteId || readyRows.length === 0}
+                disabled={submitting || readyRows.length === 0}
                 onClick={handleSubmit}
                 className="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
               >

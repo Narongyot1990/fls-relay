@@ -12,6 +12,7 @@ import type { Device, DeviceStatus, Holder, Site } from "@/types";
 
 const STATUS_FILTERS: { key: DeviceStatus | "all"; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "registered", label: "Registered" },
   { key: "in_site_stock", label: "In stock" },
   { key: "assigned", label: "Assigned" },
   { key: "returned", label: "Returned" },

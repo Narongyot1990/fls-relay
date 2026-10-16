@@ -42,7 +42,7 @@ export function deviceFromDoc(doc: DeviceDoc): Device {
     phoneNumber: doc.phoneNumber,
     status: doc.status,
     currentHolderId: doc.currentHolderId ? doc.currentHolderId.toHexString() : null,
-    currentSiteId: doc.currentSiteId.toHexString(),
+    currentSiteId: doc.currentSiteId ? doc.currentSiteId.toHexString() : null,
     mdm: doc.mdm,
     customFields: doc.customFields,
   };

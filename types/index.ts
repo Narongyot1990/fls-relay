@@ -90,7 +90,8 @@ export interface Device {
   phoneNumber: string;
   status: DeviceStatus;
   currentHolderId: string | null;
-  currentSiteId: string;
+  /** Null until a T1 "Issue to Site" transaction is confirmed — registration no longer assigns a site. */
+  currentSiteId: string | null;
   mdm?: DeviceMdmInfo;
   /** Values for this model's optional template fields, keyed by DEVICE_FIELD_CATALOG key. */
   customFields?: Record<string, string>;
@@ -100,6 +101,25 @@ export interface TransactionEvidence {
   type: string;
   url: string;
   uploadedAt: string;
+}
+
+/** A T1 "Issue to Site" transaction, enriched for display (site/device name resolved server-side). */
+export interface IssueTransaction {
+  id: string;
+  txNumber: string;
+  type: "T1";
+  imei: string;
+  deviceModel: string;
+  toSiteId: string;
+  toSiteName: string;
+  confirmState: ConfirmState;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+  confirmedById?: string | null;
+  confirmedByName?: string | null;
+  confirmedAt?: string | null;
+  rejectionNote?: string | null;
 }
 
 export interface TimelineEntry {
