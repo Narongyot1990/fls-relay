@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { DeviceActions } from "@/components/device/DeviceActions";
+import { DeviceInfoEditLink } from "@/components/device/DeviceInfoEditLink";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 import { fieldByKey } from "@/lib/device-model-fields";
@@ -35,7 +36,10 @@ export default async function DeviceDetailPage({
 
       <div className="flex flex-col gap-4 px-4 py-5">
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <p className="text-sm text-neutral-500">IMEI {maskedImei(device.imei)}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-500">IMEI {maskedImei(device.imei)}</p>
+            <DeviceInfoEditLink imei={device.imei} />
+          </div>
           <div className="mt-2">
             <StatusBadge status={device.status} />
           </div>

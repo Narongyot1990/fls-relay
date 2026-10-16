@@ -124,7 +124,10 @@ export default function RegisterDevicePage() {
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
-          <h1 className="text-base font-semibold text-neutral-900">Register a device</h1>
+          <h1 className="flex-1 text-base font-semibold text-neutral-900">Register a device</h1>
+          <Link href="/devices/import" className="px-1 text-sm font-medium text-neutral-900 underline">
+            Import CSV
+          </Link>
         </div>
 
         <div className="flex flex-col gap-4 px-4 py-5">

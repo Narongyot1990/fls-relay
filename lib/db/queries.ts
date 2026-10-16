@@ -295,6 +295,10 @@ export interface CreateDeviceInput {
 }
 
 export async function createDevice(input: CreateDeviceInput): Promise<Device> {
+  const collection = await devicesCollection();
+  await collection.createIndex({ imei: 1 }, { unique: true });
+  await collection.createIndex({ serial: 1 }, { unique: true });
+
   const doc: DeviceDoc = {
     _id: new ObjectId(),
     imei: input.imei,
@@ -310,8 +314,79 @@ export async function createDevice(input: CreateDeviceInput): Promise<Device> {
       ? { customFields: input.customFields }
       : {}),
   };
-  await (await devicesCollection()).insertOne(doc);
+  await collection.insertOne(doc);
   return deviceFromDoc(doc);
+}
+
+export interface UpdateDeviceCoreInput {
+  imei?: string;
+  serial?: string;
+  phoneNumber?: string;
+}
+
+export async function updateDeviceCore(
+  currentImei: string,
+  input: UpdateDeviceCoreInput,
+): Promise<{ device: Device | null; error?: "not_found" | "duplicate" }> {
+  const collection = await devicesCollection();
+  const existing = await collection.findOne({ imei: currentImei });
+  if (!existing) return { device: null, error: "not_found" };
+
+  const update: Record<string, unknown> = {};
+  if (input.imei !== undefined) update.imei = input.imei.trim();
+  if (input.serial !== undefined) update.serial = input.serial.trim();
+  if (input.phoneNumber !== undefined) update.phoneNumber = input.phoneNumber.trim();
+  if (Object.keys(update).length === 0) return { device: deviceFromDoc(existing) };
+
+  try {
+    await collection.updateOne({ _id: existing._id }, { $set: update });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("E11000")) {
+      return { device: null, error: "duplicate" };
+    }
+    throw err;
+  }
+
+  const doc = await collection.findOne({ _id: existing._id });
+  return { device: doc ? deviceFromDoc(doc) : null };
+}
+
+/**
+ * Bulk-creates draft device records from a CSV import: no IMEI/phone number
+ * in the source data, so each row gets a unique placeholder IMEI (device
+ * routes are IMEI-keyed everywhere, so it must always be present — never
+ * null) and an empty phone number, both meant to be filled in later via
+ * updateDeviceCore. One bad row (duplicate serial) is skipped, not fatal to
+ * the rest of the batch.
+ */
+export async function importDevices(
+  siteId: string,
+  rows: { serial: string; model: string }[],
+): Promise<{ created: Device[]; failed: { serial: string; message: string }[] }> {
+  const created: Device[] = [];
+  const failed: { serial: string; message: string }[] = [];
+
+  for (const row of rows) {
+    const placeholderImei = `PENDING-${new ObjectId().toHexString().slice(-8).toUpperCase()}`;
+    try {
+      const device = await createDevice({
+        imei: placeholderImei,
+        serial: row.serial,
+        model: row.model,
+        phoneNumber: "",
+        siteId,
+      });
+      created.push(device);
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.includes("E11000")
+          ? "Serial number already registered"
+          : "Could not create this row";
+      failed.push({ serial: row.serial, message });
+    }
+  }
+
+  return { created, failed };
 }
 
 export async function updateDeviceMdm(imei: string, mdm: DeviceMdmInfo): Promise<Device | null> {
