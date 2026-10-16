@@ -71,17 +71,11 @@ export function isSiteInScope(user: CurrentUser, siteId: string): boolean {
   return scope === "all" || scope.includes(siteId);
 }
 
-/** Decides which site an unassigned device goes to (T1 "Issue to Site") — matches spec's "L3 ... transfer between sites". */
-export function canIssueToSite(level: Level): boolean {
-  return level === "L3" || level === "L4";
-}
-
 /**
- * Confirms receipt of a T1 — the destination site's own leader, or Management.
- * L3 is deliberately excluded: they're the sender here, and two-sided
- * confirmation requires the receiver to be someone else.
+ * Decides which site an unassigned device goes to — a single, direct
+ * action (MVP simplification, no separate site-leader confirm step).
+ * Matches spec's "L3 ... transfer between sites"; L4 has the same reach.
  */
-export function canConfirmIssue(user: CurrentUser, toSiteId: string): boolean {
-  if (user.level === "L4") return true;
-  return user.level === "L2" && isSiteInScope(user, toSiteId);
+export function canAssignSite(level: Level): boolean {
+  return level === "L3" || level === "L4";
 }

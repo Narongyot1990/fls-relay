@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/device/StatusBadge";
 import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { DeviceActions } from "@/components/device/DeviceActions";
 import { DeviceInfoEditLink } from "@/components/device/DeviceInfoEditLink";
-import { DeviceIssueLink } from "@/components/device/DeviceIssueLink";
+import { DeviceAssignSiteLink } from "@/components/device/DeviceAssignSiteLink";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 import { fieldByKey } from "@/lib/device-model-fields";
@@ -76,7 +76,7 @@ export default async function DeviceDetailPage({
           </p>
         </div>
 
-        <DeviceIssueLink imei={device.imei} status={device.status} hasSite={device.currentSiteId !== null} />
+        <DeviceAssignSiteLink imei={device.imei} status={device.status} hasSite={device.currentSiteId !== null} />
 
         <DeviceActions imei={device.imei} status={device.status} hasHolder={device.currentHolderId !== null} />
       </div>

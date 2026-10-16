@@ -103,25 +103,6 @@ export interface TransactionEvidence {
   uploadedAt: string;
 }
 
-/** A T1 "Issue to Site" transaction, enriched for display (site/device name resolved server-side). */
-export interface IssueTransaction {
-  id: string;
-  txNumber: string;
-  type: "T1";
-  imei: string;
-  deviceModel: string;
-  toSiteId: string;
-  toSiteName: string;
-  confirmState: ConfirmState;
-  createdById: string;
-  createdByName: string;
-  createdAt: string;
-  confirmedById?: string | null;
-  confirmedByName?: string | null;
-  confirmedAt?: string | null;
-  rejectionNote?: string | null;
-}
-
 export interface TimelineEntry {
   id: string;
   txNumber: string;

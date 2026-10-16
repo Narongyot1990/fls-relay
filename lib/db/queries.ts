@@ -1,17 +1,8 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "./mongodb";
 import { deviceFromDoc, holderFromDoc, modelFromDoc, siteFromDoc } from "./mappers";
-import type { DeviceDoc, HolderDoc, ModelDoc, SiteDoc, TransactionDoc } from "./documents";
-import type {
-  Device,
-  DeviceMdmInfo,
-  DeviceModel,
-  DeviceStatus,
-  Holder,
-  IssueTransaction,
-  ModelImage,
-  Site,
-} from "@/types";
+import type { DeviceDoc, HolderDoc, ModelDoc, SiteDoc } from "./documents";
+import type { Device, DeviceMdmInfo, DeviceModel, DeviceStatus, Holder, ModelImage, Site } from "@/types";
 
 async function sitesCollection() {
   return (await getDb()).collection<SiteDoc>("sites");
@@ -27,10 +18,6 @@ async function holdersCollection() {
 
 async function devicesCollection() {
   return (await getDb()).collection<DeviceDoc>("devices");
-}
-
-async function transactionsCollection() {
-  return (await getDb()).collection<TransactionDoc>("transactions");
 }
 
 export async function listSites(filter: { activeOnly?: boolean } = {}): Promise<Site[]> {
@@ -433,146 +420,28 @@ export async function retireDevice(imei: string): Promise<{ retired: boolean }> 
   return { retired: result.modifiedCount > 0 };
 }
 
-async function nextTxNumber(): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await (await transactionsCollection()).countDocuments({
-    txNumber: { $regex: `^TX-${year}-` },
-  });
-  return `TX-${year}-${String(count + 1).padStart(5, "0")}`;
-}
-
-export interface CreateIssueTransactionInput {
-  imei: string;
-  toSiteId: string;
-  createdById: string;
-  createdByName: string;
-}
-
 /**
- * Records the decision to send an unassigned device to a site — does NOT
- * move the device yet. Two-sided confirmation (spec §2.3): nothing changes
- * until the receiving site leader confirms via confirmIssueTransaction.
+ * MVP simplification: a single direct action, not a two-sided ledger —
+ * Ops Supervisor or Management assigns an unassigned device straight to a
+ * site, which is authoritative on its own (they already "see everything").
+ * The site leader finds it the normal way, as stock that showed up at
+ * their site — no separate confirm step to get in their way.
  */
-export async function createIssueTransaction(
-  input: CreateIssueTransactionInput,
-): Promise<{ transaction: IssueTransaction | null; error?: "device_not_found" | "device_not_available" }> {
-  const device = await getDeviceByImei(input.imei);
-  if (!device) return { transaction: null, error: "device_not_found" };
+export async function assignDeviceToSite(
+  imei: string,
+  siteId: string,
+): Promise<{ device: Device | null; error?: "device_not_found" | "device_not_available" }> {
+  const device = await getDeviceByImei(imei);
+  if (!device) return { device: null, error: "device_not_found" };
   if (device.status !== "registered" || device.currentSiteId !== null) {
-    return { transaction: null, error: "device_not_available" };
+    return { device: null, error: "device_not_available" };
   }
 
-  const site = await getSiteById(input.toSiteId);
-  const txNumber = await nextTxNumber();
-  const doc: TransactionDoc = {
-    _id: new ObjectId(),
-    txNumber,
-    type: "T1",
-    deviceId: new ObjectId(device.id),
-    imei: device.imei,
-    deviceModel: device.model,
-    toSiteId: new ObjectId(input.toSiteId),
-    confirmState: "pending",
-    createdById: input.createdById,
-    createdByName: input.createdByName,
-    createdAt: new Date(),
-  };
-  await (await transactionsCollection()).insertOne(doc);
-
-  return {
-    transaction: {
-      id: doc._id.toHexString(),
-      txNumber: doc.txNumber,
-      type: "T1",
-      imei: doc.imei,
-      deviceModel: doc.deviceModel,
-      toSiteId: doc.toSiteId.toHexString(),
-      toSiteName: site?.name ?? "",
-      confirmState: doc.confirmState,
-      createdById: doc.createdById,
-      createdByName: doc.createdByName,
-      createdAt: doc.createdAt.toISOString(),
-    },
-  };
-}
-
-export async function listPendingIssueTransactions(): Promise<IssueTransaction[]> {
-  const docs = await (await transactionsCollection())
-    .find({ type: "T1", confirmState: "pending" })
-    .sort({ createdAt: 1 })
-    .toArray();
-
-  const sites = await listSites();
-  const siteNameById = new Map(sites.map((s) => [s.id, s.name]));
-
-  return docs.map((doc) => ({
-    id: doc._id.toHexString(),
-    txNumber: doc.txNumber,
-    type: "T1",
-    imei: doc.imei,
-    deviceModel: doc.deviceModel,
-    toSiteId: doc.toSiteId.toHexString(),
-    toSiteName: siteNameById.get(doc.toSiteId.toHexString()) ?? "",
-    confirmState: doc.confirmState,
-    createdById: doc.createdById,
-    createdByName: doc.createdByName,
-    createdAt: doc.createdAt.toISOString(),
-  }));
-}
-
-export async function getTransactionById(id: string): Promise<TransactionDoc | null> {
-  return (await transactionsCollection()).findOne({ _id: new ObjectId(id) });
-}
-
-export async function confirmIssueTransaction(
-  id: string,
-  input: { confirmedById: string; confirmedByName: string },
-): Promise<{ ok: boolean; error?: "not_found" | "not_pending" }> {
-  const collection = await transactionsCollection();
-  const tx = await collection.findOne({ _id: new ObjectId(id) });
-  if (!tx) return { ok: false, error: "not_found" };
-  if (tx.confirmState !== "pending") return { ok: false, error: "not_pending" };
-
+  const collection = await devicesCollection();
   await collection.updateOne(
-    { _id: tx._id },
-    {
-      $set: {
-        confirmState: "confirmed",
-        confirmedById: input.confirmedById,
-        confirmedByName: input.confirmedByName,
-        confirmedAt: new Date(),
-      },
-    },
+    { imei },
+    { $set: { currentSiteId: new ObjectId(siteId), status: "in_site_stock" } },
   );
-  await (await devicesCollection()).updateOne(
-    { _id: tx.deviceId },
-    { $set: { currentSiteId: tx.toSiteId, status: "in_site_stock" } },
-  );
-
-  return { ok: true };
-}
-
-export async function rejectIssueTransaction(
-  id: string,
-  input: { note?: string; rejectedById: string; rejectedByName: string },
-): Promise<{ ok: boolean; error?: "not_found" | "not_pending" }> {
-  const collection = await transactionsCollection();
-  const tx = await collection.findOne({ _id: new ObjectId(id) });
-  if (!tx) return { ok: false, error: "not_found" };
-  if (tx.confirmState !== "pending") return { ok: false, error: "not_pending" };
-
-  await collection.updateOne(
-    { _id: tx._id },
-    {
-      $set: {
-        confirmState: "rejected",
-        confirmedById: input.rejectedById,
-        confirmedByName: input.rejectedByName,
-        confirmedAt: new Date(),
-        rejectionNote: input.note ?? null,
-      },
-    },
-  );
-
-  return { ok: true };
+  const doc = await collection.findOne({ imei });
+  return { device: doc ? deviceFromDoc(doc) : null };
 }

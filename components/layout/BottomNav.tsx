@@ -3,16 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Inbox, Smartphone } from "lucide-react";
-import { usePendingTransactions } from "@/lib/use-pending-transactions";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { items: pendingItems } = usePendingTransactions();
-  const inboxBadge = pendingItems?.length ?? 0;
 
+  // Inbox badge is 0 until hand-out/take-back/swap confirmation is wired to the database.
   const items = [
     { href: "/", label: "Home", icon: Home, badge: 0 },
-    { href: "/inbox", label: "Inbox", icon: Inbox, badge: inboxBadge },
+    { href: "/inbox", label: "Inbox", icon: Inbox, badge: 0 },
     { href: "/devices", label: "Phones", icon: Smartphone, badge: 0 },
   ];
 

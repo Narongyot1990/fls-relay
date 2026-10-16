@@ -116,7 +116,7 @@ export default function ImportDevicesPage() {
             <p className="text-lg font-semibold text-neutral-900">{result.created.length} device(s) imported</p>
             <p className="mt-1 text-sm text-neutral-600">
               They&apos;re registered with a placeholder IMEI and no site yet — edit each one to fill
-              in the real IMEI and phone number, then an Ops Supervisor or Management can issue it
+              in the real IMEI and phone number, then an Ops Supervisor or Management can assign it
               to a site.
             </p>
           </div>

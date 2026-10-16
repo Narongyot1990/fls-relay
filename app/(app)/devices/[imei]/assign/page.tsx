@@ -9,7 +9,7 @@ import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
 import type { Device, Site } from "@/types";
 
-export default function IssueDevicePage() {
+export default function AssignDeviceSitePage() {
   const router = useRouter();
   const params = useParams<{ imei: string }>();
   const { user } = useCurrentUser();
@@ -37,14 +37,14 @@ export default function IssueDevicePage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/transactions/issue", {
+      const res = await fetch(`/api/devices/${params.imei}/assign-site`, {
         method: "POST",
         headers: userHeaders(user),
-        body: JSON.stringify({ imei: params.imei, toSiteId: siteId, createdById: user.id, createdByName: user.name }),
+        body: JSON.stringify({ siteId }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Could not issue this device");
+        setError(data.error ?? "Could not assign this device");
         return;
       }
       setSubmitted(true);
@@ -65,10 +65,8 @@ export default function IssueDevicePage() {
             <Check className="h-7 w-7" />
           </span>
           <div>
-            <p className="text-lg font-semibold text-neutral-900">Sent to {siteName}</p>
-            <p className="mt-1 text-sm text-neutral-600">
-              Waiting for that site&apos;s leader to confirm receipt — the device moves once they do.
-            </p>
+            <p className="text-lg font-semibold text-neutral-900">Now in stock at {siteName}</p>
+            <p className="mt-1 text-sm text-neutral-600">That site&apos;s leader can see it right away.</p>
           </div>
           <Link
             href={`/devices/${params.imei}`}
@@ -93,7 +91,7 @@ export default function IssueDevicePage() {
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
-          <h1 className="text-base font-semibold text-neutral-900">Issue to a site</h1>
+          <h1 className="text-base font-semibold text-neutral-900">Assign to a site</h1>
         </div>
 
         {device === null ? (
@@ -103,7 +101,7 @@ export default function IssueDevicePage() {
             <p className="text-sm text-neutral-600">{device.model}</p>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-neutral-800">Destination site</span>
+              <span className="text-sm font-medium text-neutral-800">Site</span>
               <select
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
@@ -125,7 +123,7 @@ export default function IssueDevicePage() {
               onClick={handleSubmit}
               className="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
             >
-              {submitting ? "Sending…" : "Send to site"}
+              {submitting ? "Assigning…" : "Assign"}
             </button>
           </div>
         )}

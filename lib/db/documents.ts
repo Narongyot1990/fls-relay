@@ -41,21 +41,3 @@ export interface DeviceDoc {
   mdm?: DeviceMdmInfo;
   customFields?: Record<string, string>;
 }
-
-export interface TransactionDoc {
-  _id: ObjectId;
-  txNumber: string;
-  type: "T1";
-  deviceId: ObjectId;
-  imei: string;
-  deviceModel: string;
-  toSiteId: ObjectId;
-  confirmState: "pending" | "confirmed" | "rejected";
-  createdById: string;
-  createdByName: string;
-  createdAt: Date;
-  confirmedById?: string | null;
-  confirmedByName?: string | null;
-  confirmedAt?: Date | null;
-  rejectionNote?: string | null;
-}

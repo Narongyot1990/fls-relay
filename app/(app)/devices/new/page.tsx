@@ -90,7 +90,7 @@ export default function RegisterDevicePage() {
             <p className="text-lg font-semibold text-neutral-900">Device registered</p>
             <p className="mt-1 text-sm text-neutral-600">
               {modelName} is in the register, not yet at a site — an Ops Supervisor or Management
-              will issue it to one.
+              will assign it to one.
             </p>
           </div>
           <Link
