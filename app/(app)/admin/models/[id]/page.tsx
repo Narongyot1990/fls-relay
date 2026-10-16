@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Images } from "lucide-react";
+import { ChevronLeft, ChevronRight, Images, Pencil } from "lucide-react";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders } from "@/lib/api-client";
@@ -126,6 +126,18 @@ export default function ModelDetailPage() {
             </div>
 
             <div className="flex flex-col gap-3">
+              <Link
+                href={`/admin/models/${model.id}/edit`}
+                className="flex min-h-[64px] w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-4 active:bg-neutral-50"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-700">
+                  <Pencil className="h-6 w-6" />
+                </span>
+                <span className="flex-1 text-left text-base font-medium text-neutral-900">
+                  Edit name & fields
+                </span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-neutral-400" />
+              </Link>
               <Link
                 href={`/admin/models/${model.id}/photos`}
                 className="flex min-h-[64px] w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-4 active:bg-neutral-50"

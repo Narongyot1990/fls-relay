@@ -108,6 +108,52 @@ export async function setModelActive(id: string, active: boolean): Promise<Devic
   return doc ? modelFromDoc(doc) : null;
 }
 
+export interface UpdateModelInput {
+  name?: string;
+  fieldKeys?: string[];
+}
+
+/**
+ * Renaming cascades to every device's denormalised `model` string (devices
+ * store the model name directly, not a reference) so existing registrations
+ * stay matched to their model instead of silently falling out of sync.
+ */
+export async function updateModel(
+  id: string,
+  input: UpdateModelInput,
+): Promise<{ model: DeviceModel | null; error?: "not_found" | "duplicate_name" }> {
+  const collection = await modelsCollection();
+  const existing = await collection.findOne({ _id: new ObjectId(id) });
+  if (!existing) return { model: null, error: "not_found" };
+
+  const update: Record<string, unknown> = {};
+  if (input.fieldKeys) update.fieldKeys = input.fieldKeys;
+
+  const newName = input.name?.trim();
+  const renaming = newName !== undefined && newName !== existing.name;
+  if (renaming) {
+    await collection.createIndex({ name: 1 }, { unique: true });
+    update.name = newName;
+  }
+
+  try {
+    if (Object.keys(update).length > 0) {
+      await collection.updateOne({ _id: new ObjectId(id) }, { $set: update });
+    }
+    if (renaming) {
+      await (await devicesCollection()).updateMany({ model: existing.name }, { $set: { model: newName } });
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("E11000")) {
+      return { model: null, error: "duplicate_name" };
+    }
+    throw err;
+  }
+
+  const doc = await collection.findOne({ _id: new ObjectId(id) });
+  return { model: doc ? modelFromDoc(doc) : null };
+}
+
 export async function deleteModel(id: string): Promise<{ deleted: boolean; devices: number }> {
   const model = await getModelById(id);
   if (!model) return { deleted: false, devices: 0 };
