@@ -46,13 +46,20 @@ export default function RegisterDevicePage() {
     setCustomFields((prev) => ({ ...prev, [key]: value }));
   }
 
-  const canSubmit =
-    !submitting &&
-    siteId !== "" &&
-    modelName.trim() !== "" &&
-    serial.trim() !== "" &&
-    imei.trim().length >= 6 &&
-    phoneNumber.trim() !== "";
+  const missingReason =
+    siteId === ""
+      ? "Select a site"
+      : modelName.trim() === ""
+        ? "Select a model"
+        : serial.trim() === ""
+          ? "Enter the serial number"
+          : imei.trim().length < 6
+            ? "Enter a valid IMEI"
+            : phoneNumber.trim() === ""
+              ? "Enter the phone number"
+              : null;
+
+  const canSubmit = !submitting && missingReason === null;
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -238,6 +245,9 @@ export default function RegisterDevicePage() {
           >
             {submitting ? "Registering…" : "Register device"}
           </button>
+          {!submitting && missingReason && (
+            <p className="text-center text-sm text-neutral-500">{missingReason}</p>
+          )}
         </div>
       </div>
     </RequireLevel>
