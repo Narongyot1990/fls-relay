@@ -41,6 +41,27 @@ const { parseInventoryCsv } = load('lib/inventory-csv.ts');
 const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
 
+test('production inventory can be read without a password or session', async () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const { inventoryAccess } = load('lib/inventory-access.ts');
+    const access = await inventoryAccess(new Request('https://example.test/api/inventory', { headers: { 'X-Inventory-Role': 'it' } }));
+    assert.equal(access.role, 'it');
+    assert.equal(access.actor, 'public-test-it');
+  } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
+});
+test('public production writes accept same-origin operators without a session', async () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const { inventoryAccess } = load('lib/inventory-access.ts');
+    const access = await inventoryAccess(new Request('https://example.test/api/inventory/import', { method: 'POST', headers: { 'X-Inventory-Role': 'implementation', Origin: 'https://example.test' } }), true);
+    assert.equal(access.role, 'implementation');
+    await assert.rejects(inventoryAccess(new Request('https://example.test/api/inventory/import', { method: 'POST', headers: { 'X-Inventory-Role': 'it', Origin: 'https://other.test' } }), true), /origin/);
+  } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
+});
+
 test('CSV handles BOM, quoted commas, escaped quotes and quoted multiline cells', () => {
   const parsed = parseInventoryCsv('\uFEFFDevice name,Managed by\r\n"A,1","In""tune\nAdmin"\r\n');
   assert.deepEqual(parsed.headers, ['Device name', 'Managed by']);

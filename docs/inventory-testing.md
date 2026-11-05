@@ -8,10 +8,9 @@
 - ดึง development environment ของ Vercel โปรเจกต์ `fls-relay` ผ่าน CLI ไว้ใน `.env.local` ซึ่ง Git ignore อยู่ ไม่แสดง secret ในโค้ดหรือเอกสาร
 - ใช้ collection `devices`, `sites`, `holders` เดิม ไม่มีการย้ายหรือลบข้อมูลเดิม
 - ดูภาพรวมทุกไซต์/รายไซต์/สต็อกที่ยังไม่จัดสรรไซต์ได้ ส่วน Site Leader อ้างอิง holder จริงและตรวจไซต์บน API ด้วย
-- Production ใช้ `/login` และรหัสร่วมสำหรับกลุ่มผู้ทดสอบตามที่ผู้ใช้อนุมัติ เมื่อผ่านรหัสจึงสลับบทบาทและทดสอบข้อมูลจริงได้ Session มีอายุ 8 ชั่วโมงและใช้ cookie แบบ Secure/HttpOnly ระบบนี้ยังไม่ใช่บัญชีพนักงานส่วนบุคคล
-- Proxy ครอบหน้าเว็บและ API เดิม/ใหม่บน Production ผู้ที่ไม่มี session ไม่สามารถข้ามไปเรียก Inventory หรือ legacy API ด้วย role headers อย่างเดียว การเขียนข้อมูลตรวจ Origin เพิ่มด้วย ส่วน localhost ยังคงทดสอบได้ตามเดิม
-- เพิ่ม production variables ใหม่เฉพาะ `INVENTORY_TEST_PASSWORD_HASH` และ `INVENTORY_SESSION_SECRET` ไม่เปลี่ยนค่าฐานข้อมูล รหัสจริงถูกเก็บในไฟล์ส่วนตัว `.local-backups/production-test-password.txt` ที่ Git ignore และไม่ถูกส่งไปใน client bundle
-- เข้า `/login` เพื่อเริ่มใช้งาน และใช้ Sign out ที่หัวเว็บเพื่อออกจากระบบเมื่อทดสอบเสร็จ Import จะเขียนข้อมูลจริงเมื่อกดยืนยันเท่านั้น
+- ผู้ใช้สั่งถอด auth และเปิดทดสอบสาธารณะบน Production ทุกคนเปิดเว็บ สลับบทบาท และทดสอบข้อมูลจริงได้โดยไม่ใช้รหัส/session ตัวสลับบทบาทเป็นเครื่องมือเลือก workflow ไม่ใช่การยืนยันตัวตน
+- ไม่มี auth proxy หรือ session API อีกต่อไป หน้า `/` และ bookmark `/login` เดิมนำไป `/preview` โดยตรง การเขียน Inventory ยังตรวจ Origin และสิทธิ์งานตามบทบาทที่เลือก แต่ทุกคนสามารถเลือกบทบาท IT/Implementation ได้
+- Import ยังคงเขียนเมื่อกดยืนยันเท่านั้น ไม่มีการ import หรือลบข้อมูลเครื่องจากการถอด auth
 
 ## นำเข้าโดยผู้ใช้
 
@@ -61,7 +60,6 @@ Legacy importer ที่สร้าง PENDING IMEI ถูกปิด (HTTP 4
 
 ## หลักฐานการตรวจ
 
-- `node scripts/test-test-session.mjs`: ตรวจ password verification, missing configuration, session expiry/tampering/rotation, cookie handling, same-origin checks, secure login/logout และ throttling โดยไม่เชื่อมฐานข้อมูลจริง
 
 - `node scripts/test-inventory.mjs`: ทดสอบ parser, Excel dates/numeric versions, mapping, duplicate IDs, optional identifiers, index migration และ import confirmation ด้วย in-memory fakes ไม่เชื่อม DB เพื่อเขียน
 - `node --env-file=.env.local scripts/verify-inventory-readonly.mjs <path-to-file>`: เรียก preview และ GET เท่านั้น ตรวจจำนวนและ fingerprint ของ devices + indexes ก่อน/หลังให้เหมือนกัน รวมการทดสอบ Site Leader ข้ามขอบเขตแล้วได้ 403

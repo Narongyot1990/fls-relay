@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Smartphone, Home, Search, MapPin, ArrowLeft, Pencil, Trash2, Users, LogOut } from "lucide-react";
+import { Smartphone, Home, Search, MapPin, ArrowLeft, Pencil, Trash2, Users } from "lucide-react";
 import { WORKFLOW_ACTIONS, WORKFLOW_ROLES, type WorkflowActionId } from "@/lib/workflow-structure";
 import type { InventoryItem, InventoryRole } from "@/lib/inventory";
 import { InventoryImport } from "./InventoryImport";
@@ -17,7 +16,6 @@ const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-l
 const input = "mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-base";
 
 export function InventoryWorkspace() {
-  const router = useRouter();
   const { language, t } = useLanguage();
   const [role, setRole] = useState<InventoryRole>("it");
   const [site, setSite] = useState("all");
@@ -45,7 +43,6 @@ export function InventoryWorkspace() {
     fetch(`/api/inventory?site=${role === "site_leader" ? "all" : encodeURIComponent(site)}`, {
       headers: { "X-Inventory-Role": role, ...(leader ? { "X-Inventory-Leader": leader } : {}) }, signal: controller.signal, cache: "no-store",
     }).then(async (response) => {
-      if (response.status === 401) { router.replace("/login"); router.refresh(); return; }
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Cannot load inventory");
       if (controller.signal.aborted) return;
@@ -53,7 +50,7 @@ export function InventoryWorkspace() {
       if (role !== "site_leader") { setLeaders(result.leaders); setSiteOptions(result.sites); }
     }).catch((cause) => { if (!controller.signal.aborted) { setData(null); setError(cause instanceof Error ? cause.message : "Cannot connect to database"); setBusy(false); } });
     return () => controller.abort();
-  }, [role, site, leader, version, router]);
+  }, [role, site, leader, version]);
 
   function reload() { setBusy(true); setData(null); setError(null); setVersion((value) => value + 1); }
   function changeRole(next: InventoryRole) {
@@ -100,11 +97,8 @@ export function InventoryWorkspace() {
   }
 
   return <div lang={language} className="min-h-screen bg-[#f8fafc] text-slate-900 [font-family:Arial,'Tahoma',sans-serif]">
-    <header className="border-b border-slate-200 bg-white px-4 py-4"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><button onClick={() => { setScreen("home"); setEditing(null); }} className="flex items-center gap-3"><span className="rounded-lg bg-blue-600 p-2 text-white"><Smartphone size={22} /></span><span className="text-left"><strong className="block text-sm sm:text-base">FLS Phone Management</strong><span className="text-xs text-slate-400">{t("ระบบจัดการโทรศัพท์บริษัท")}</span></span></button><div className="flex items-center gap-2"><LanguageSwitcher />{process.env.NODE_ENV === "production" && <button type="button" disabled={saving} onClick={async () => {
-      const response = await fetch("/api/test-session", { method: "DELETE" });
-      if (response.ok) { router.replace("/login"); router.refresh(); }
-    }} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-slate-500"><LogOut size={16} />{t("Sign out")}</button>}</div></div></header>
-    <div className="border-b border-amber-100 bg-amber-50 px-4 py-2 text-center text-xs leading-6 text-amber-900">{t("Production testing uses real data. Role switching is available to the signed-in test group. Imports save only after confirmation.")}</div>
+    <header className="border-b border-slate-200 bg-white px-4 py-4"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><button onClick={() => { setScreen("home"); setEditing(null); }} className="flex items-center gap-3"><span className="rounded-lg bg-blue-600 p-2 text-white"><Smartphone size={22} /></span><span className="text-left"><strong className="block text-sm sm:text-base">FLS Phone Management</strong><span className="text-xs text-slate-400">{t("ระบบจัดการโทรศัพท์บริษัท")}</span></span></button><div className="flex items-center gap-2"><LanguageSwitcher /></div></div></header>
+    <div className="border-b border-amber-100 bg-amber-50 px-4 py-2 text-center text-xs leading-6 text-amber-900">{t("Public testing uses real data. Anyone can switch roles and test inventory. Imports save only after confirmation.")}</div>
     <div className="border-b border-slate-200 bg-white px-4 py-3"><div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
       <label className="text-sm">{t("บทบาท")}<select value={role} disabled={saving} onChange={(event) => changeRole(event.target.value as InventoryRole)} className="ml-2 min-h-11 rounded-lg border border-slate-200 px-3 text-blue-700">{roles.map((item) => <option key={item} value={item}>{WORKFLOW_ROLES[item][language]}</option>)}</select></label>
       {siteLeader ? <label className="text-sm">{t("ผู้ใช้จริง")}<select value={leader} onChange={(event) => { setLeader(event.target.value); setData(null); setBusy(true); setEditing(null); }} className="ml-2 min-h-11 rounded-lg border border-slate-200 px-3"><option value="">{t("เลือก Site Leader")}</option>{leaders.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : <label className="text-sm">{t("ดูข้อมูล")}<select value={site} onChange={(event) => { setSite(event.target.value); setData(null); setBusy(true); setEditing(null); setDeleting(null); }} className="ml-2 min-h-11 max-w-72 rounded-lg border border-slate-200 px-3"><option value="all">{t("ทุกไซต์ · ภาพรวม")}</option>{siteOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}<option value="central">{t("สต็อกส่วนกลาง · ยังไม่จัดสรรไซต์")}</option></select></label>}

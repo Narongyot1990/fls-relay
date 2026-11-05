@@ -1,12 +1,7 @@
 export type UiLanguage = "en" | "th";
 
 export const UI_EN: Record<string, string> = {
-  "ออกจากระบบ": "Sign out",
-  "การทดสอบใช้ข้อมูลจริง กลุ่มผู้ทดสอบที่ลงชื่อเข้าใช้สามารถสลับบทบาทได้ Import จะบันทึกเมื่อยืนยันเท่านั้น": "Production testing uses real data. Role switching is available to the signed-in test group. Imports save only after confirmation.",
-  "รหัสทดสอบไม่ถูกต้อง": "Incorrect test password.",
-  "ลองรหัสหลายครั้งเกินไป กรุณาลองใหม่ภายหลัง": "Too many attempts. Please try again later.",
-  "ยังไม่ได้ตั้งค่าการเข้าถึงสำหรับทดสอบบน Production": "Production test access is not configured yet.",
-  "กรุณาเข้าสู่ระบบด้วยรหัสทดสอบเพื่อดำเนินการต่อ": "Sign in with the production test password to continue.",
+  "เปิดทดสอบสาธารณะด้วยข้อมูลจริง ทุกคนสลับบทบาทและทดสอบ Inventory ได้ Import จะบันทึกเมื่อยืนยันเท่านั้น": "Public testing uses real data. Anyone can switch roles and test inventory. Imports save only after confirmation.",
   "ระบบจัดการโทรศัพท์บริษัท": "Company phone management",
   "รีเฟรช": "Refresh",
   "เชื่อมฐานข้อมูลจริง · ไม่มีข้อมูลตัวอย่าง · ตัวสลับบทบาทใช้ทดสอบบน localhost เท่านั้น ยังไม่ใช่ระบบ Login": "Live database · No sample records · Role switching is for localhost testing; authentication is not yet enabled",
