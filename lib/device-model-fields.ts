@@ -1,6 +1,10 @@
 export type DeviceFieldInputType = "text" | "select" | "date";
 
-export type DeviceFieldCategory = "Procurement & identification" | "Hardware & connectivity" | "SIM & network";
+export type DeviceFieldCategory =
+  | "Procurement & identification"
+  | "Hardware & connectivity"
+  | "SIM & network"
+  | "Location & ownership";
 
 export interface DeviceFieldOption {
   key: string;
@@ -52,6 +56,7 @@ export const DEVICE_FIELD_CATALOG: DeviceFieldOption[] = [
   },
   { key: "purchaseDate", label: "Purchase date", category: "Procurement & identification", inputType: "date" },
   { key: "warrantyExpiry", label: "Warranty expiry", category: "Procurement & identification", inputType: "date" },
+  { key: "vendor", label: "Vendor", category: "Procurement & identification", inputType: "text", placeholder: "e.g. Samsung" },
 
   // Hardware & connectivity
   {
@@ -89,6 +94,13 @@ export const DEVICE_FIELD_CATALOG: DeviceFieldOption[] = [
   },
   { key: "simPukCode", label: "SIM PUK code", category: "SIM & network", inputType: "text", placeholder: "8 digits — unlocks a PIN-locked SIM" },
   { key: "simDataPlan", label: "SIM data plan", category: "SIM & network", inputType: "text", placeholder: "e.g. Unlimited 10Mbps" },
+
+  // Location & ownership
+  { key: "area", label: "Area", category: "Location & ownership", inputType: "text", placeholder: "e.g. Floor 14, ShopHouse" },
+  { key: "department", label: "Department", category: "Location & ownership", inputType: "text", placeholder: "e.g. IT, Transport" },
+  { key: "hostname", label: "Hostname", category: "Location & ownership", inputType: "text" },
+  { key: "managedByName", label: "Managed by", category: "Location & ownership", inputType: "text", placeholder: "Name of the person managing this device" },
+  { key: "usedByEmail", label: "Used by (email)", category: "Location & ownership", inputType: "text", placeholder: "name@company.com" },
 ];
 
 export function fieldByKey(key: string): DeviceFieldOption | undefined {

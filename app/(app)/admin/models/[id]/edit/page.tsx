@@ -9,7 +9,12 @@ import { userHeaders } from "@/lib/api-client";
 import { DEVICE_FIELD_CATALOG, describeField, type DeviceFieldCategory } from "@/lib/device-model-fields";
 import type { DeviceModel } from "@/types";
 
-const CATEGORIES: DeviceFieldCategory[] = ["Procurement & identification", "Hardware & connectivity", "SIM & network"];
+const CATEGORIES: DeviceFieldCategory[] = [
+  "Procurement & identification",
+  "Hardware & connectivity",
+  "SIM & network",
+  "Location & ownership",
+];
 
 export default function EditModelPage() {
   const router = useRouter();

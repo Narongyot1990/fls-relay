@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Search, Smartphone, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/device/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -21,8 +22,12 @@ const STATUS_FILTERS: { key: DeviceStatus | "all"; label: string }[] = [
 ];
 
 export default function DevicesPage() {
+  const searchParams = useSearchParams();
+  const initialStatus = (searchParams.get("status") as DeviceStatus | null) ?? "all";
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<DeviceStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<DeviceStatus | "all">(
+    STATUS_FILTERS.some((f) => f.key === initialStatus) ? initialStatus : "all",
+  );
   const [activeSiteId, setActiveSiteId] = useState<string>("all");
   const { user } = useCurrentUser();
   const canFilterBySite = canViewAllSites(user.level);

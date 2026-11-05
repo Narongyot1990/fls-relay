@@ -40,7 +40,7 @@ export default function AssignDeviceSitePage() {
       const res = await fetch(`/api/devices/${params.imei}/assign-site`, {
         method: "POST",
         headers: userHeaders(user),
-        body: JSON.stringify({ siteId }),
+        body: JSON.stringify({ siteId, byUserName: user.name }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

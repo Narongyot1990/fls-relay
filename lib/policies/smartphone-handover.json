@@ -1,0 +1,316 @@
+{
+  "source": "Professional_Smartphone_Handover_Bilingual_EN_TH.docx",
+  "sha256": "a48ee0a11942a17944f4905ebaf5e5c2b325b52231afdd610cacb8f7bfbd0f34",
+  "title": {
+    "en": "Professional Smartphone Handover & Responsibility Agreement",
+    "th": "ข้อตกลงการส่งมอบสมาร์ทโฟนสำหรับการทำงานและความรับผิดชอบ"
+  },
+  "fields": [
+    {
+      "en": "Employee Name: ____________________________________",
+      "th": "ชื่อพนักงาน: ____________________________________"
+    },
+    {
+      "en": "Employee ID: ____________________________________",
+      "th": "รหัสพนักงาน: ____________________________________"
+    },
+    {
+      "en": "Department: ____________________________________",
+      "th": "แผนก: ____________________________________"
+    },
+    {
+      "en": "Phone Number Assigned: ____________________________________",
+      "th": "หมายเลขโทรศัพท์ที่ได้รับมอบหมาย: ____________________________________"
+    },
+    {
+      "en": "Device Brand / Model: ____________________________________",
+      "th": "ยี่ห้อ / รุ่นของอุปกรณ์: ____________________________________"
+    },
+    {
+      "en": "IMEI / Serial Number: ____________________________________",
+      "th": "หมายเลข IMEI / หมายเลขเครื่อง: ____________________________________"
+    },
+    {
+      "en": "SIM Card Number: ____________________________________",
+      "th": "หมายเลขซิมการ์ด: ____________________________________"
+    },
+    {
+      "en": "Date of Handover: ____ / ____ / ______",
+      "th": "วันที่ส่งมอบ: ____ / ____ / ______"
+    }
+  ],
+  "accessoriesTitle": {
+    "en": "Accessories provided:",
+    "th": "อุปกรณ์เสริมที่ได้รับมอบ:"
+  },
+  "accessories": [
+    {
+      "en": "Charger adaptor",
+      "th": "อะแดปเตอร์ชาร์จ"
+    },
+    {
+      "en": "USB Cable",
+      "th": "สาย USB"
+    },
+    {
+      "en": "Protective Case",
+      "th": "เคสป้องกัน"
+    },
+    {
+      "en": "Screen protector",
+      "th": "ฟิล์มกันรอยหน้าจอ"
+    },
+    {
+      "en": "SIM Card",
+      "th": "ซิมการ์ด"
+    }
+  ],
+  "sections": [
+    {
+      "title": {
+        "en": "1. Purpose of the Device",
+        "th": "1. วัตถุประสงค์ของอุปกรณ์"
+      },
+      "paragraphs": [
+        {
+          "en": "The smartphone provided remains the property of FLS TRANSPORT CO., LTD.",
+          "th": "สมาร์ทโฟนที่ได้รับมอบหมายยังคงเป็นทรัพย์สินของบริษัท FLS TRANSPORT CO., LTD."
+        },
+        {
+          "en": "and is assigned exclusively for professional/business use related to company operations and transportation activities.",
+          "th": "และมอบหมายให้ใช้เฉพาะเพื่อการทำงานหรือธุรกิจที่เกี่ยวข้องกับการดำเนินงานของบริษัทและกิจกรรมด้านการขนส่งเท่านั้น"
+        },
+        {
+          "en": "The employee acknowledges receipt of the device in good working condition together with the accessories provided.",
+          "th": "พนักงานรับทราบว่าได้รับอุปกรณ์ในสภาพพร้อมใช้งาน พร้อมอุปกรณ์เสริมที่บริษัทจัดให้"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "2. Employee Responsibilities",
+        "th": "2. ความรับผิดชอบของพนักงาน"
+      },
+      "paragraphs": [
+        {
+          "en": "The employee agrees to:",
+          "th": "พนักงานตกลงที่จะ:"
+        },
+        {
+          "en": "• Take proper care of the smartphone and accessories.",
+          "th": "ดูแลสมาร์ทโฟนและอุปกรณ์เสริมอย่างเหมาะสม"
+        },
+        {
+          "en": "• Keep the device secure at all times.",
+          "th": "เก็บรักษาอุปกรณ์ให้ปลอดภัยอยู่เสมอ"
+        },
+        {
+          "en": "• Use the device in compliance with company policies and applicable laws.",
+          "th": "ใช้อุปกรณ์ตามนโยบายของบริษัทและกฎหมายที่เกี่ยวข้อง"
+        },
+        {
+          "en": "• Avoid unauthorized installation of applications or modification of device settings.",
+          "th": "หลีกเลี่ยงการติดตั้งแอปพลิเคชันหรือแก้ไขการตั้งค่าอุปกรณ์โดยไม่ได้รับอนุญาต"
+        },
+        {
+          "en": "• Immediately report any malfunction, damage, loss, or theft to the supervisor.",
+          "th": "รายงานความผิดปกติ ความเสียหาย การสูญหาย หรือการถูกโจรกรรมต่อหัวหน้างานทันที"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "3. Damage / Breakage",
+        "th": "3. ความเสียหาย / การชำรุด"
+      },
+      "paragraphs": [
+        {
+          "en": "In the event of accidental or negligent damage, including but not limited to:",
+          "th": "ในกรณีที่เกิดความเสียหายจากอุบัติเหตุหรือความประมาท รวมถึงแต่ไม่จำกัดเพียง:"
+        },
+        {
+          "en": "• Broken screen",
+          "th": "หน้าจอแตก"
+        },
+        {
+          "en": "• Water damage",
+          "th": "ความเสียหายจากน้ำ"
+        },
+        {
+          "en": "• Physical damage",
+          "th": "ความเสียหายทางกายภาพ"
+        },
+        {
+          "en": "• Charging or hardware issues caused by misuse",
+          "th": "ปัญหาการชาร์จหรือปัญหาฮาร์ดแวร์ที่เกิดจากการใช้งานผิดวิธี"
+        },
+        {
+          "en": "The employee must report the incident immediately.",
+          "th": "พนักงานต้องรายงานเหตุการณ์ดังกล่าวทันที"
+        },
+        {
+          "en": "The company reserves the right to:",
+          "th": "บริษัทขอสงวนสิทธิ์ในการ:"
+        },
+        {
+          "en": "• Evaluate the cause of the damage.",
+          "th": "ประเมินสาเหตุของความเสียหาย"
+        },
+        {
+          "en": "• Request partial or full reimbursement in cases of negligence or intentional misuse, according to company policy and local labor regulations.",
+          "th": "เรียกให้ชำระค่าเสียหายคืนบางส่วนหรือทั้งหมดในกรณีที่เกิดจากความประมาทหรือการใช้งานผิดวัตถุประสงค์โดยเจตนา ตามนโยบายของบริษัทและกฎหมายแรงงานท้องถิ่น"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "4. Loss of Device",
+        "th": "4. การสูญหายของอุปกรณ์"
+      },
+      "paragraphs": [
+        {
+          "en": "If the smartphone is lost, the employee must:",
+          "th": "หากสมาร์ทโฟนสูญหาย พนักงานต้อง:"
+        },
+        {
+          "en": "1. Notify the company immediately.",
+          "th": "แจ้งบริษัททันที"
+        },
+        {
+          "en": "2. Provide a written explanation of the circumstances.",
+          "th": "จัดทำคำชี้แจงเป็นลายลักษณ์อักษรเกี่ยวกับเหตุการณ์ที่เกิดขึ้น"
+        },
+        {
+          "en": "3. Cooperate with any security or insurance procedures.",
+          "th": "ให้ความร่วมมือกับกระบวนการด้านความปลอดภัยหรือการประกันภัยที่เกี่ยวข้อง"
+        },
+        {
+          "en": "The company may request reimbursement if the loss is determined to result from negligence.",
+          "th": "บริษัทอาจเรียกให้ชำระค่าเสียหายคืน หากพิจารณาแล้วว่าการสูญหายเกิดจากความประมาท"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "5. Theft",
+        "th": "5. การถูกโจรกรรม"
+      },
+      "paragraphs": [
+        {
+          "en": "In case of theft, the employee must:",
+          "th": "ในกรณีที่ถูกโจรกรรม พนักงานต้อง:"
+        },
+        {
+          "en": "1. Inform the company immediately.",
+          "th": "แจ้งบริษัททันที"
+        },
+        {
+          "en": "2. File a police report within 24 hours whenever possible.",
+          "th": "แจ้งความต่อเจ้าหน้าที่ตำรวจภายใน 24 ชั่วโมง หากสามารถดำเนินการได้"
+        },
+        {
+          "en": "3. Provide a copy of the police report to the company.",
+          "th": "ส่งสำเนาใบแจ้งความให้บริษัท"
+        },
+        {
+          "en": "The company will assess each case individually before determining employee liability.",
+          "th": "บริษัทจะพิจารณาแต่ละกรณีเป็นรายกรณีก่อนกำหนดความรับผิดของพนักงาน"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "6. Return of Equipment",
+        "th": "6. การคืนอุปกรณ์"
+      },
+      "paragraphs": [
+        {
+          "en": "The smartphone and all accessories must be returned:",
+          "th": "ต้องคืนสมาร์ทโฟนและอุปกรณ์เสริมทั้งหมด:"
+        },
+        {
+          "en": "• Upon request by the company",
+          "th": "เมื่อบริษัทมีการร้องขอ"
+        },
+        {
+          "en": "• Upon role change",
+          "th": "เมื่อมีการเปลี่ยนแปลงบทบาทหน้าที่"
+        },
+        {
+          "en": "• Upon termination/resignation",
+          "th": "เมื่อสิ้นสุดการจ้างงานหรือเมื่อลาออก"
+        },
+        {
+          "en": "The device must be returned in reasonable working condition, excluding normal wear and tear.",
+          "th": "ต้องคืนอุปกรณ์ในสภาพพร้อมใช้งานตามสมควร โดยไม่รวมการสึกหรอตามการใช้งานปกติ"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "7. Data & Security",
+        "th": "7. ข้อมูลและความปลอดภัย"
+      },
+      "paragraphs": [
+        {
+          "en": "The employee understands that:",
+          "th": "พนักงานรับทราบว่า:"
+        },
+        {
+          "en": "• The device may contain company data and business applications.",
+          "th": "อุปกรณ์อาจมีข้อมูลของบริษัทและแอปพลิเคชันทางธุรกิจ"
+        },
+        {
+          "en": "• The company may remotely lock, track, or wipe the device if necessary for security purposes.",
+          "th": "บริษัทอาจล็อก ติดตาม หรือลบข้อมูลในอุปกรณ์จากระยะไกล หากจำเป็นเพื่อวัตถุประสงค์ด้านความปลอดภัย"
+        },
+        {
+          "en": "• Personal data stored on the device may be deleted during security or reset operations.",
+          "th": "ข้อมูลส่วนบุคคลที่จัดเก็บไว้ในอุปกรณ์อาจถูกลบระหว่างการดำเนินการด้านความปลอดภัยหรือการรีเซ็ตอุปกรณ์"
+        }
+      ]
+    },
+    {
+      "title": {
+        "en": "8. Acknowledgment",
+        "th": "8. การรับทราบ"
+      },
+      "paragraphs": [
+        {
+          "en": "I acknowledge receipt of the above-mentioned equipment and confirm that I understand and accept the responsibilities described in this document.",
+          "th": "ข้าพเจ้ารับทราบว่าได้รับอุปกรณ์ดังกล่าวข้างต้น และยืนยันว่าข้าพเจ้าเข้าใจและยอมรับความรับผิดชอบที่ระบุไว้ในเอกสารฉบับนี้"
+        }
+      ]
+    }
+  ],
+  "acknowledgement": {
+    "en": "I acknowledge receipt of the above-mentioned equipment and confirm that I understand and accept the responsibilities described in this document.",
+    "th": "ข้าพเจ้ารับทราบว่าได้รับอุปกรณ์ดังกล่าวข้างต้น และยืนยันว่าข้าพเจ้าเข้าใจและยอมรับความรับผิดชอบที่ระบุไว้ในเอกสารฉบับนี้"
+  },
+  "driverHeading": {
+    "en": "Employee / Driver",
+    "th": "พนักงาน / พนักงานขับรถ"
+  },
+  "representativeHeading": {
+    "en": "Company Representative",
+    "th": "ตัวแทนบริษัท"
+  },
+  "representativeFields": [
+    {
+      "en": "Name: ____________________________________",
+      "th": "ชื่อ: ____________________________________"
+    },
+    {
+      "en": "Position: __________________________________",
+      "th": "ตำแหน่ง: __________________________________"
+    },
+    {
+      "en": "Signature: _________________________________",
+      "th": "ลายมือชื่อ: _________________________________"
+    },
+    {
+      "en": "Date: ____ / ____ / ______",
+      "th": "วันที่: ____ / ____ / ______"
+    }
+  ]
+}

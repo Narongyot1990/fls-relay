@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assignDeviceToSite } from "@/lib/db/queries";
+import { assignDeviceToSite, getSiteById } from "@/lib/db/queries";
 import { canAssignSite } from "@/lib/permissions";
 import type { Level } from "@/types";
 
@@ -25,11 +25,18 @@ export async function POST(
   const { imei } = await context.params;
   const body = await request.json();
   const siteId = typeof body?.siteId === "string" ? body.siteId : "";
+  const byUserName = typeof body?.byUserName === "string" ? body.byUserName : "Unknown";
   if (!siteId) {
     return NextResponse.json({ error: "siteId is required" }, { status: 400 });
   }
 
-  const { device, error } = await assignDeviceToSite(imei, siteId);
+  const site = await getSiteById(siteId);
+  const byUserId = request.headers.get("x-user-id") ?? "";
+  const { device, error } = await assignDeviceToSite(imei, siteId, {
+    byUserId,
+    byUserName,
+    detail: `To ${site?.name ?? "a site"}`,
+  });
   if (error === "device_not_found") {
     return NextResponse.json({ error: "Device not found" }, { status: 404 });
   }

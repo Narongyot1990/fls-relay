@@ -9,7 +9,12 @@ import { useCurrentUser } from "@/lib/current-user";
 import { userHeaders, userAuthHeaders } from "@/lib/api-client";
 import { DEVICE_FIELD_CATALOG, describeField, type DeviceFieldCategory } from "@/lib/device-model-fields";
 
-const CATEGORIES: DeviceFieldCategory[] = ["Procurement & identification", "Hardware & connectivity", "SIM & network"];
+const CATEGORIES: DeviceFieldCategory[] = [
+  "Procurement & identification",
+  "Hardware & connectivity",
+  "SIM & network",
+  "Location & ownership",
+];
 
 interface StagedImage {
   file: File;

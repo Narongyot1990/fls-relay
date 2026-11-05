@@ -36,8 +36,8 @@ export function holderFromDoc(doc: HolderDoc): Holder {
 export function deviceFromDoc(doc: DeviceDoc): Device {
   return {
     id: doc._id.toHexString(),
-    imei: doc.imei,
-    serial: doc.serial,
+    imei: doc.imei ?? "",
+    serial: doc.serial ?? "",
     model: doc.model,
     phoneNumber: doc.phoneNumber,
     status: doc.status,
@@ -45,5 +45,6 @@ export function deviceFromDoc(doc: DeviceDoc): Device {
     currentSiteId: doc.currentSiteId ? doc.currentSiteId.toHexString() : null,
     mdm: doc.mdm,
     customFields: doc.customFields,
+    lastActivity: doc.lastActivity,
   };
 }

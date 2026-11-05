@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import type { DeviceMdmInfo, DeviceStatus, ModelImage } from "@/types";
+import type { DeviceActivity, DeviceMdmInfo, DeviceStatus, ModelImage } from "@/types";
 
 export interface SiteDoc {
   _id: ObjectId;
@@ -40,4 +40,5 @@ export interface DeviceDoc {
   active: boolean;
   mdm?: DeviceMdmInfo;
   customFields?: Record<string, string>;
+  lastActivity?: DeviceActivity;
 }

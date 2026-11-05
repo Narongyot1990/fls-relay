@@ -44,3 +44,9 @@ next-env.d.ts
 /ideas/
 
 .env*.local
+
+# Local database backups may contain company and staff data.
+/.local-backups/
+
+# Local preview server output.
+/.next-preview.*.log

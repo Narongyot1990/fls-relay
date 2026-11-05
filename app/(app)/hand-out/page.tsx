@@ -15,6 +15,7 @@ import { SignaturePad } from "@/components/transaction/SignaturePad";
 import { SummaryReadback } from "@/components/transaction/SummaryReadback";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
+import { userHeaders } from "@/lib/api-client";
 import { ACCESSORY_LABELS, deviceLabel, selectedAccessories, DEFAULT_ACCESSORIES } from "@/lib/codes";
 import type { AccessoryKey, ConditionGradeKey, Device, Holder } from "@/types";
 
@@ -32,21 +33,55 @@ export default function HandOutPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [formAttached, setFormAttached] = useState(false);
   const [signed, setSigned] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [stock, setStock] = useState<Device[]>([]);
   const [drivers, setDrivers] = useState<Holder[]>([]);
 
   useEffect(() => {
-    fetch(`/api/devices?siteId=${user.siteId}&status=in_site_stock`)
+    fetch(`/api/devices?siteId=${user.siteId}`)
       .then((r) => r.json())
-      .then((data) => setStock(data.devices ?? []));
+      .then((data) => {
+        const devices: Device[] = data.devices ?? [];
+        setStock(devices.filter((d) => d.status === "in_site_stock" || d.status === "returned"));
+      });
     fetch(`/api/holders?siteId=${user.siteId}&type=driver`)
       .then((r) => r.json())
       .then((data) => setDrivers(data.holders ?? []));
   }, [user.siteId]);
 
-  const canSubmit = formAttached || signed;
+  const canSubmit = (formAttached || signed) && !submitting;
+
+  async function handleSubmit() {
+    if (!device || !holder) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch(`/api/devices/${device.imei}/hand-out`, {
+        method: "POST",
+        headers: userHeaders(user),
+        body: JSON.stringify({
+          holderId: holder.id,
+          accessories: selectedAccessories(accessories),
+          conditionGrade: condition,
+          evidenceAttached: formAttached || signed,
+          byUserName: user.name,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error ?? "Could not hand out this device");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setSubmitError("Network error — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (user.siteId === null) {
     return (
@@ -80,8 +115,8 @@ export default function HandOutPage() {
             <Check className="h-7 w-7" />
           </span>
           <div>
-            <p className="text-lg font-semibold text-neutral-900">Sent to {holder.name}</p>
-            <p className="mt-1 text-sm text-neutral-600">Waiting for them to confirm</p>
+            <p className="text-lg font-semibold text-neutral-900">Handed to {holder.name}</p>
+            <p className="mt-1 text-sm text-neutral-600">They have it now.</p>
           </div>
           <Link
             href="/"
@@ -191,14 +226,15 @@ export default function HandOutPage() {
                 <button
                   type="button"
                   disabled={!canSubmit}
-                  onClick={() => setSubmitted(true)}
+                  onClick={handleSubmit}
                   className="flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
                 >
-                  Hand over phone
+                  {submitting ? "Sending…" : "Hand over phone"}
                 </button>
-                {!canSubmit && (
+                {!formAttached && !signed && (
                   <p className="mt-2 text-center text-sm text-red-600">Signed form required</p>
                 )}
+                {submitError && <p className="mt-2 text-center text-sm text-red-600">{submitError}</p>}
               </>
             )}
           </div>

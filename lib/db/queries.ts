@@ -1,8 +1,9 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "./mongodb";
+import { ensureInventoryIndexes, inventoryCollection } from "./inventory";
 import { deviceFromDoc, holderFromDoc, modelFromDoc, siteFromDoc } from "./mappers";
 import type { DeviceDoc, HolderDoc, ModelDoc, SiteDoc } from "./documents";
-import type { Device, DeviceMdmInfo, DeviceModel, DeviceStatus, Holder, ModelImage, Site } from "@/types";
+import type { Device, DeviceActivity, DeviceMdmInfo, DeviceModel, DeviceStatus, Holder, ModelImage, Site } from "@/types";
 
 async function sitesCollection() {
   return (await getDb()).collection<SiteDoc>("sites");
@@ -297,8 +298,7 @@ export interface CreateDeviceInput {
 
 export async function createDevice(input: CreateDeviceInput): Promise<Device> {
   const collection = await devicesCollection();
-  await collection.createIndex({ imei: 1 }, { unique: true });
-  await collection.createIndex({ serial: 1 }, { unique: true });
+  await ensureInventoryIndexes(await inventoryCollection());
 
   const doc: DeviceDoc = {
     _id: new ObjectId(),
@@ -352,42 +352,6 @@ export async function updateDeviceCore(
   return { device: doc ? deviceFromDoc(doc) : null };
 }
 
-/**
- * Bulk-creates draft device records from a CSV import: no IMEI/phone number
- * in the source data, so each row gets a unique placeholder IMEI (device
- * routes are IMEI-keyed everywhere, so it must always be present — never
- * null) and an empty phone number, both meant to be filled in later via
- * updateDeviceCore. One bad row (duplicate serial) is skipped, not fatal to
- * the rest of the batch.
- */
-export async function importDevices(
-  rows: { serial: string; model: string }[],
-): Promise<{ created: Device[]; failed: { serial: string; message: string }[] }> {
-  const created: Device[] = [];
-  const failed: { serial: string; message: string }[] = [];
-
-  for (const row of rows) {
-    const placeholderImei = `PENDING-${new ObjectId().toHexString().slice(-8).toUpperCase()}`;
-    try {
-      const device = await createDevice({
-        imei: placeholderImei,
-        serial: row.serial,
-        model: row.model,
-        phoneNumber: "",
-      });
-      created.push(device);
-    } catch (err) {
-      const message =
-        err instanceof Error && err.message.includes("E11000")
-          ? "Serial number already registered"
-          : "Could not create this row";
-      failed.push({ serial: row.serial, message });
-    }
-  }
-
-  return { created, failed };
-}
-
 export async function updateDeviceMdm(imei: string, mdm: DeviceMdmInfo): Promise<Device | null> {
   const collection = await devicesCollection();
   await collection.updateOne({ imei }, { $set: { mdm } });
@@ -421,6 +385,23 @@ export async function retireDevice(imei: string): Promise<{ retired: boolean }> 
 }
 
 /**
+ * Who performed an action and a single pre-formatted display line — the
+ * caller (API route) builds `detail` since it has access to the display
+ * labels (site/holder names, accessory/reason labels); the query layer just
+ * stores it. Not a ledger — each write overwrites the device's one
+ * `lastActivity` snapshot.
+ */
+interface ActivityInput {
+  byUserId: string;
+  byUserName: string;
+  detail: string;
+}
+
+function activityDoc(type: DeviceActivity["type"], input: ActivityInput): DeviceActivity {
+  return { type, at: new Date().toISOString(), byUserId: input.byUserId, byUserName: input.byUserName, detail: input.detail };
+}
+
+/**
  * MVP simplification: a single direct action, not a two-sided ledger —
  * Ops Supervisor or Management assigns an unassigned device straight to a
  * site, which is authoritative on its own (they already "see everything").
@@ -430,6 +411,7 @@ export async function retireDevice(imei: string): Promise<{ retired: boolean }> 
 export async function assignDeviceToSite(
   imei: string,
   siteId: string,
+  activity: ActivityInput,
 ): Promise<{ device: Device | null; error?: "device_not_found" | "device_not_available" }> {
   const device = await getDeviceByImei(imei);
   if (!device) return { device: null, error: "device_not_found" };
@@ -440,7 +422,111 @@ export async function assignDeviceToSite(
   const collection = await devicesCollection();
   await collection.updateOne(
     { imei },
-    { $set: { currentSiteId: new ObjectId(siteId), status: "in_site_stock" } },
+    {
+      $set: {
+        currentSiteId: new ObjectId(siteId),
+        status: "in_site_stock",
+        lastActivity: activityDoc("assigned_site", activity),
+      },
+    },
+  );
+  const doc = await collection.findOne({ imei });
+  return { device: doc ? deviceFromDoc(doc) : null };
+}
+
+/**
+ * Pulls a device back out of a site's stock into the unassigned pool —
+ * reverses `assignDeviceToSite`. Same actors (L3/L4), same guard shape as
+ * `retireDevice` (available at a site, not currently with a driver).
+ */
+export async function unassignDeviceFromSite(
+  imei: string,
+  activity: ActivityInput,
+): Promise<{ device: Device | null; error?: "device_not_found" | "device_not_available" }> {
+  const device = await getDeviceByImei(imei);
+  if (!device) return { device: null, error: "device_not_found" };
+  if (device.status !== "in_site_stock" && device.status !== "returned") {
+    return { device: null, error: "device_not_available" };
+  }
+
+  const collection = await devicesCollection();
+  await collection.updateOne(
+    { imei },
+    {
+      $set: {
+        currentSiteId: null,
+        status: "registered",
+        lastActivity: activityDoc("unassigned_site", activity),
+      },
+    },
+  );
+  const doc = await collection.findOne({ imei });
+  return { device: doc ? deviceFromDoc(doc) : null };
+}
+
+/**
+ * Site Leader hands a phone from site stock to a specific driver at their
+ * site. Single-step, same MVP shape as site assignment — no second-side
+ * confirm.
+ */
+export async function handOutDevice(
+  imei: string,
+  holderId: string,
+  activity: ActivityInput,
+): Promise<{
+  device: Device | null;
+  error?: "device_not_found" | "device_not_available" | "holder_not_found" | "holder_wrong_site";
+}> {
+  const device = await getDeviceByImei(imei);
+  if (!device) return { device: null, error: "device_not_found" };
+  if (device.status !== "in_site_stock" && device.status !== "returned") {
+    return { device: null, error: "device_not_available" };
+  }
+
+  const holder = await getHolderById(holderId);
+  if (!holder || holder.type !== "driver" || !holder.active) {
+    return { device: null, error: "holder_not_found" };
+  }
+  if (holder.siteId !== device.currentSiteId) {
+    return { device: null, error: "holder_wrong_site" };
+  }
+
+  const collection = await devicesCollection();
+  await collection.updateOne(
+    { imei },
+    {
+      $set: {
+        currentHolderId: new ObjectId(holderId),
+        status: "assigned",
+        lastActivity: activityDoc("hand_out", activity),
+      },
+    },
+  );
+  const doc = await collection.findOne({ imei });
+  return { device: doc ? deviceFromDoc(doc) : null };
+}
+
+/** Site Leader receives a phone back from its current driver. */
+export async function takeBackDevice(
+  imei: string,
+  activity: ActivityInput,
+): Promise<{ device: Device | null; error?: "device_not_found" | "device_not_available" }> {
+  const device = await getDeviceByImei(imei);
+  if (!device) return { device: null, error: "device_not_found" };
+  if (device.status !== "assigned") {
+    return { device: null, error: "device_not_available" };
+  }
+
+  const collection = await devicesCollection();
+  await collection.updateOne(
+    { imei },
+    {
+      $set: {
+        currentHolderId: null,
+        status: "returned",
+        lastActivity: activityDoc("take_back", activity),
+      },
+    },
   );
   const doc = await collection.findOne({ imei });
   return { device: doc ? deviceFromDoc(doc) : null };

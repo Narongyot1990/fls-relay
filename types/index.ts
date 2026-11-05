@@ -82,6 +82,15 @@ export interface DeviceMdmInfo {
   updatedBy: string;
 }
 
+/** A single most-recent-action snapshot — not a ledger, just what last happened to this device. */
+export interface DeviceActivity {
+  type: "assigned_site" | "unassigned_site" | "hand_out" | "take_back";
+  at: string;
+  byUserId: string;
+  byUserName: string;
+  detail: string;
+}
+
 export interface Device {
   id: string;
   imei: string;
@@ -95,6 +104,7 @@ export interface Device {
   mdm?: DeviceMdmInfo;
   /** Values for this model's optional template fields, keyed by DEVICE_FIELD_CATALOG key. */
   customFields?: Record<string, string>;
+  lastActivity?: DeviceActivity;
 }
 
 export interface TransactionEvidence {

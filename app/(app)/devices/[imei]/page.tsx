@@ -6,6 +6,7 @@ import { MdmInfoCard } from "@/components/device/MdmInfoCard";
 import { DeviceActions } from "@/components/device/DeviceActions";
 import { DeviceInfoEditLink } from "@/components/device/DeviceInfoEditLink";
 import { DeviceAssignSiteLink } from "@/components/device/DeviceAssignSiteLink";
+import { DeviceUnassignSiteLink } from "@/components/device/DeviceUnassignSiteLink";
 import { getDeviceByImei, getHolderById, getSiteById } from "@/lib/db/queries";
 import { maskedImei } from "@/lib/codes";
 import { fieldByKey } from "@/lib/device-model-fields";
@@ -70,13 +71,19 @@ export default async function DeviceDetailPage({
         )}
 
         <div>
-          <h2 className="mb-3 text-base font-semibold text-neutral-900">Custody history</h2>
-          <p className="text-sm text-neutral-500">
-            No recorded history yet — the transaction ledger isn&apos;t wired up yet.
-          </p>
+          <h2 className="mb-3 text-base font-semibold text-neutral-900">Last activity</h2>
+          {device.lastActivity ? (
+            <p className="text-sm text-neutral-700">
+              {device.lastActivity.detail}
+              <span className="text-neutral-400"> · {new Date(device.lastActivity.at).toLocaleDateString()}</span>
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-500">No activity yet.</p>
+          )}
         </div>
 
         <DeviceAssignSiteLink imei={device.imei} status={device.status} hasSite={device.currentSiteId !== null} />
+        <DeviceUnassignSiteLink imei={device.imei} status={device.status} hasSite={device.currentSiteId !== null} />
 
         <DeviceActions imei={device.imei} status={device.status} hasHolder={device.currentHolderId !== null} />
       </div>

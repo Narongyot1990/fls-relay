@@ -13,6 +13,7 @@ import { EvidenceCapture } from "@/components/transaction/EvidenceCapture";
 import { SummaryReadback } from "@/components/transaction/SummaryReadback";
 import { RequireLevel } from "@/components/shared/RequireLevel";
 import { useCurrentUser } from "@/lib/current-user";
+import { userHeaders } from "@/lib/api-client";
 import { ACCESSORY_LABELS, deviceLabel, selectedAccessories, DEFAULT_ACCESSORIES } from "@/lib/codes";
 import type { AccessoryKey, ConditionGradeKey, Device, Holder } from "@/types";
 
@@ -27,7 +28,9 @@ export default function TakeBackPage() {
   const [accessories, setAccessories] = useState<Record<AccessoryKey, boolean>>(DEFAULT_ACCESSORIES);
   const [condition, setCondition] = useState<ConditionGradeKey>("A");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [assigned, setAssigned] = useState<Device[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
@@ -42,6 +45,33 @@ export default function TakeBackPage() {
   }, [user.siteId]);
 
   const holder = device ? holders.find((h) => h.id === device.currentHolderId) : undefined;
+
+  async function handleSubmit() {
+    if (!device) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch(`/api/devices/${device.imei}/take-back`, {
+        method: "POST",
+        headers: userHeaders(user),
+        body: JSON.stringify({
+          accessories: selectedAccessories(accessories),
+          conditionGrade: condition,
+          byUserName: user.name,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error ?? "Could not take back this device");
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setSubmitError("Network error — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (user.siteId === null) {
     return (
@@ -73,7 +103,7 @@ export default function TakeBackPage() {
           </span>
           <div>
             <p className="text-lg font-semibold text-neutral-900">Took back {device.model}</p>
-            <p className="mt-1 text-sm text-neutral-600">Waiting for confirmation</p>
+            <p className="mt-1 text-sm text-neutral-600">Back in site stock.</p>
           </div>
           <Link
             href="/"
@@ -146,13 +176,17 @@ export default function TakeBackPage() {
               </button>
             )}
             {step === TOTAL_STEPS && (
-              <button
-                type="button"
-                onClick={() => setSubmitted(true)}
-                className="flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white"
-              >
-                Take back phone
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleSubmit}
+                  className="flex min-h-[52px] w-full items-center justify-center rounded-xl bg-neutral-900 text-base font-medium text-white disabled:opacity-40"
+                >
+                  {submitting ? "Taking back…" : "Take back phone"}
+                </button>
+                {submitError && <p className="mt-2 text-center text-sm text-red-600">{submitError}</p>}
+              </>
             )}
           </div>
         </div>

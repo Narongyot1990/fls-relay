@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowLeft,
-  Repeat,
+  Send,
+  Undo2,
   List,
   AlertTriangle,
   ClipboardList,
@@ -21,7 +22,7 @@ import {
   canApprove,
   canExportReports,
   canRegisterDevices,
-  canHandleHandovers,
+  canAssignSite,
   canAccessAdmin,
 } from "@/lib/permissions";
 import type { Device, Site } from "@/types";
@@ -98,11 +99,16 @@ export default function HomePage() {
         {canRegisterDevices(user.level) && (
           <ActionButton href="/devices/new" icon={PlusSquare} label="Register a device" />
         )}
-        {canHandleHandovers(user.level) && (
+        {user.level === "L2" && (
           <>
             <ActionButton href="/hand-out" icon={ArrowRight} label="Hand out a phone" />
             <ActionButton href="/take-back" icon={ArrowLeft} label="Take back a phone" />
-            <ActionButton href="/swap" icon={Repeat} label="Swap a phone" />
+          </>
+        )}
+        {canAssignSite(user.level) && (
+          <>
+            <ActionButton href="/devices?status=registered" icon={Send} label="Assign to a site" />
+            <ActionButton href="/devices?status=in_site_stock" icon={Undo2} label="Unassign from a site" />
           </>
         )}
         <ActionButton href="/devices" icon={List} label="All phones" />
