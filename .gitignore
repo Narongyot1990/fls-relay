@@ -50,3 +50,7 @@ next-env.d.ts
 
 # Local preview server output.
 /.next-preview.*.log
+
+# Browser test artifacts.
+/test-results/
+/playwright-report/

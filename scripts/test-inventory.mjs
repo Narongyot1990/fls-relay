@@ -40,6 +40,63 @@ const { validateImportRows } = load('lib/inventory.ts');
 const { parseInventoryCsv } = load('lib/inventory-csv.ts');
 const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
+const { validateSiteInput, validatePersonInput } = load('lib/directory.ts');
+
+test('directory validation requires stable site codes, employee IDs and existing site references', () => {
+  assert.deepEqual(validateSiteInput({ code: ' qa-site ', name: ' Yard ' }), { code: 'QA-SITE', name: 'Yard' });
+  assert.throws(() => validateSiteInput({ code: 'bad code', name: 'Yard' }));
+  assert.throws(() => validateSiteInput({ code: 'QA', name: '  ' }));
+  const person = validatePersonInput({ type: 'driver', name: ' Driver ', employeeNo: '00ab', siteId: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
+  assert.equal(person.employeeNo, '00AB'); assert.equal(person.phone, '');
+  assert.throws(() => validatePersonInput({ ...person, type: 'it' }));
+  assert.throws(() => validatePersonInput({ ...person, siteId: 'central' }));
+  assert.throws(() => validatePersonInput({ ...person, employeeNo: '' }));
+});
+
+test('IT/System Admin can maintain the directory; field handover roles cannot', async () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const { inventoryAccess } = load('lib/inventory-access.ts');
+    const request = (role) => new Request('https://example.test/api/inventory/sites', { method: 'POST', headers: { 'X-Inventory-Role': role, Origin: 'https://example.test' } });
+    assert.equal((await inventoryAccess(request('system_admin'), 'directory')).role, 'system_admin');
+    assert.equal((await inventoryAccess(request('it'), 'directory')).role, 'it');
+    await assert.rejects(inventoryAccess(request('implementation'), 'directory'), /Only IT and System Admin/);
+    await assert.rejects(inventoryAccess(request('site_leader'), 'directory'), /Only IT and System Admin/);
+  } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
+});
+
+test('site creation checks duplicates and never creates records on validation failure', async () => {
+  const documents = [], access = load('lib/inventory-access.ts');
+  const collection = { findOne: async ({ code }) => documents.find((doc) => doc.code.toLowerCase() === code.toLowerCase()),
+    createIndex: async () => {}, insertOne: async (doc) => documents.push(doc) };
+  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) },
+    '@/lib/db/mongodb': { getDb: async () => ({ collection: () => collection }) } })('app/api/inventory/sites/route.ts');
+  const request = (body) => new Request('https://example.test/api/inventory/sites', { method: 'POST', body: JSON.stringify(body) });
+  assert.equal((await route.POST(request({ code: 'bad code', name: 'Test' }))).status, 400); assert.equal(documents.length, 0);
+  const created = await route.POST(request({ code: 'qa', name: 'Test' }));
+  assert.equal(created.status, 201); assert.equal((await created.json()).site.code, 'QA');
+  assert.equal((await route.POST(request({ code: 'qa', name: 'Other' }))).status, 409); assert.equal(documents.length, 1);
+});
+
+test('people require an active site and employee IDs are unique across both person types', async () => {
+  const documents = [], access = load('lib/inventory-access.ts'); let siteActive = false;
+  const holders = { findOne: async ({ employeeNo }) => documents.find((doc) => doc.employeeNo.toLowerCase() === employeeNo.toLowerCase()),
+    createIndex: async () => {}, insertOne: async (doc) => documents.push(doc) };
+  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) },
+    '@/lib/db/mongodb': { getDb: async () => ({ collection: (name) => {
+      if (name === 'sites') return { findOne: async () => siteActive ? { active: true } : null };
+      assert.equal(name, 'holders', 'Creating people must not transfer devices or create assignments'); return holders;
+    } }) } })('app/api/inventory/people/route.ts');
+  const body = { type: 'driver', name: 'Test person', employeeNo: 'qa-001', siteId: 'aaaaaaaaaaaaaaaaaaaaaaaa' };
+  const request = (value) => new Request('https://example.test/api/inventory/people', { method: 'POST', body: JSON.stringify(value) });
+  assert.equal((await route.POST(request(body))).status, 400); assert.equal(documents.length, 0);
+  siteActive = true;
+  const created = await route.POST(request(body)); assert.equal(created.status, 201);
+  const person = (await created.json()).person; assert.equal(person.employeeNo, 'QA-001'); assert.equal(person.siteId, body.siteId);
+  assert.equal((await route.POST(request({ ...body, type: 'site_leader', employeeNo: 'QA-001' }))).status, 409);
+  assert.equal(documents.length, 1);
+});
 
 test('production inventory can be read without a password or session', async () => {
   const previous = process.env.NODE_ENV;

@@ -4,6 +4,8 @@
 
 ## สิ่งที่เปลี่ยน
 
+- เมนู Site/People เพิ่มไซต์และบุคลากรจริงได้สำหรับ IT/System Admin ตาม [site-people-plan.md](./site-people-plan.md) โดยไม่สร้างข้อมูลอัตโนมัติ ปุ่ม Delete เปิดเป็น dialog ทันทีและแสดง loading/error ใน dialog ไม่ต้องกด Edit ร่วม
+
 - หน้านี้อ่าน MongoDB จริง ไม่มีข้อมูลเครื่อง คนขับ หรือไซต์ตัวอย่าง และไม่ seed ข้อมูลเมื่อเปิดหน้า
 - ดึง development environment ของ Vercel โปรเจกต์ `fls-relay` ผ่าน CLI ไว้ใน `.env.local` ซึ่ง Git ignore อยู่ ไม่แสดง secret ในโค้ดหรือเอกสาร
 - ใช้ collection `devices`, `sites`, `holders` เดิม ไม่มีการย้ายหรือลบข้อมูลเดิม

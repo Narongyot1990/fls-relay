@@ -48,7 +48,7 @@ export const WORKFLOW_ROLES: Record<WorkflowAudience, {
   it: {
     th: "ฝ่าย IT", en: "IT", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์",
     note: "เสนอให้รับเครื่องและดูแลข้อมูลได้ ต้องยืนยันสิทธิ์นำเข้าและผู้มีอำนาจอนุญาตจ่ายใหม่ ไม่ให้สิทธิ์ส่งมอบโดยอัตโนมัติ",
-    actions: ["dashboard", "receive", "inventory", "technical", "history"],
+    actions: ["dashboard", "receive", "inventory", "technical", "history", "directory"],
   },
   implementation: {
     th: "ทีมดำเนินการ", en: "Implementation Team", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูและดำเนินงานทุกไซต์ตามสิทธิ์",

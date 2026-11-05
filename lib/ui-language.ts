@@ -1,6 +1,15 @@
 export type UiLanguage = "en" | "th";
 
 export const UI_EN: Record<string, string> = {
+  "รหัสไซต์": "Site code",
+  "ประเภทบุคลากร": "Person type",
+  "ไซต์สังกัด": "Assigned site",
+  "เพิ่มข้อมูลแล้ว": "Record added.",
+  "รหัสไซต์นี้มีในระบบแล้ว": "Site code already exists",
+  "FLS Employee ID นี้มีในระบบแล้ว": "FLS Employee ID already exists",
+  "กรุณาเลือกไซต์ที่มีอยู่และเปิดใช้งาน": "Select an existing active site",
+  "เลือก Driver หรือ Site Leader": "Select Driver or Site Leader",
+  "เฉพาะ IT และ System Admin จัดการไซต์และบุคลากรได้": "Only IT and System Admin may maintain sites and people",
   "เปิดทดสอบสาธารณะด้วยข้อมูลจริง ทุกคนสลับบทบาทและทดสอบ Inventory ได้ Import จะบันทึกเมื่อยืนยันเท่านั้น": "Public testing uses real data. Anyone can switch roles and test inventory. Imports save only after confirmation.",
   "ระบบจัดการโทรศัพท์บริษัท": "Company phone management",
   "รีเฟรช": "Refresh",

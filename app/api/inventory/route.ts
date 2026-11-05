@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       db.collection("holders").find(site !== "all" && site !== "central" ? { siteId: new ObjectId(site) } : site === "central" ? { _id: { $exists: false } } : {}).toArray(),
       db.collection("holders").find({ type: "site_leader", active: true, ...(access.siteId ? { _id: new ObjectId(access.actor) } : {}) }).toArray(),
     ]);
-    const person = (item: typeof holders[number]) => ({ id: String(item._id), name: String(item.name), type: String(item.type), employeeNo: String(item.employeeNo ?? ""), siteId: String(item.siteId), active: item.active === true });
-    return Response.json({ devices: devices.map(inventoryItem), sites: sites.map((item) => ({ id: String(item._id), name: String(item.name), active: item.active === true })), holders: holders.map(person), leaders: leaders.map(person), assignedSite: access.siteId }, { headers: { "Cache-Control": "no-store" } });
+    const person = (item: typeof holders[number]) => ({ id: String(item._id), name: String(item.name), type: String(item.type), employeeNo: String(item.employeeNo ?? ""), siteId: String(item.siteId), phone: String(item.phone ?? ""), active: item.active === true });
+    return Response.json({ devices: devices.map(inventoryItem), sites: sites.map((item) => ({ id: String(item._id), code: String(item.code ?? ""), name: String(item.name), active: item.active === true })), holders: holders.map(person), leaders: leaders.map(person), assignedSite: access.siteId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return inventoryFailure(error); }
 }

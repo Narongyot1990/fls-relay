@@ -4,14 +4,17 @@ import { useRef, useState } from "react";
 import { FileSpreadsheet, Upload, CheckCircle2 } from "lucide-react";
 import type { ImportPreview } from "@/lib/inventory";
 import { useLanguage } from "@/components/shared/LanguageProvider";
+import { LoadingIcon } from "./LoadingIcon";
 
-export function InventoryImport({ headers, onImported }: { headers: Record<string, string>; onImported: () => void }) {
+export function InventoryImport({ headers, onImported, onBusyChange }: { headers: Record<string, string>; onImported: () => void; onBusyChange?: (busy: boolean) => void }) {
   const { t } = useLanguage();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [identifier, setIdentifier] = useState("");
   const [sheet, setSheet] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<"preview" | "import" | null>(null);
+  const busy = operation !== null;
+  const inFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<{ created: string[]; skipped: string[]; failed: { deviceId: string; error: string }[] } | null>(null);
@@ -21,9 +24,10 @@ export function InventoryImport({ headers, onImported }: { headers: Record<strin
   const existing = preview?.rows.filter((row) => row.existing).length ?? 0;
 
   async function inspect() {
-    if (!file || busy) return;
+    if (!file || busy || inFlight.current) return;
+    inFlight.current = true;
     const id = ++requestId.current;
-    setBusy(true); setError(null); setPreview(null); setResult(null); setConfirmed(false);
+    setOperation("preview"); onBusyChange?.(true); setError(null); setPreview(null); setResult(null); setConfirmed(false);
     const form = new FormData(); form.set("file", file);
     if (identifier) form.set("identifier", identifier);
     if (sheet) form.set("sheet", sheet);
@@ -34,12 +38,13 @@ export function InventoryImport({ headers, onImported }: { headers: Record<strin
       if (!response.ok) throw new Error(data.error || "Cannot preview this file");
       setPreview(data); setIdentifier(data.identifier); setSheet(data.sheet);
     } catch (cause) { if (id === requestId.current) setError(cause instanceof Error ? cause.message : "Cannot preview file"); }
-    finally { if (id === requestId.current) setBusy(false); }
+    finally { inFlight.current = false; if (id === requestId.current) { setOperation(null); onBusyChange?.(false); } }
   }
 
   async function commit() {
-    if (!preview || !confirmed || busy || !ready.length || result) return;
-    setBusy(true); setError(null);
+    if (!preview || !confirmed || busy || !ready.length || result || inFlight.current) return;
+    inFlight.current = true;
+    setOperation("import"); onBusyChange?.(true); setError(null);
     try {
       const response = await fetch("/api/inventory/import", { method: "POST", headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: true, filename: preview.filename, rows: ready }) });
@@ -47,7 +52,7 @@ export function InventoryImport({ headers, onImported }: { headers: Record<strin
       if (!response.ok) throw new Error(data.error || "Import failed");
       setResult(data); setConfirmed(false); onImported();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Import failed. Refresh inventory before retrying."); }
-    finally { setBusy(false); }
+    finally { inFlight.current = false; setOperation(null); onBusyChange?.(false); }
   }
 
   return <div className="space-y-5">
@@ -62,7 +67,7 @@ export function InventoryImport({ headers, onImported }: { headers: Record<strin
         <label className="text-sm font-medium">{t("คอลัมน์ที่จะใช้เป็น Device ID")}<select value={identifier} disabled={busy || Boolean(result)} onChange={(event) => { setIdentifier(event.target.value); setConfirmed(false); }} className="mt-2 min-h-11 w-full rounded-lg border border-slate-200 px-3">{preview.headers.map((name) => <option key={name}>{name}</option>)}</select></label>
         {preview.sheets.length > 0 && <label className="text-sm font-medium">Worksheet<select value={sheet} disabled={busy || Boolean(result)} onChange={(event) => { setSheet(event.target.value); setConfirmed(false); }} className="mt-2 min-h-11 w-full rounded-lg border border-slate-200 px-3">{preview.sheets.map((name) => <option key={name}>{name}</option>)}</select></label>}
       </div>}
-      <button type="button" disabled={!file || busy} onClick={inspect} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400"><Upload size={16} />{busy ? t("กำลังดำเนินการ…") : t("ตรวจข้อมูลก่อนนำเข้า (ไม่บันทึก)")}</button>
+      <button type="button" disabled={!file || busy} aria-busy={operation === "preview"} onClick={inspect} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400">{operation === "preview" ? <LoadingIcon /> : <Upload size={16} />}{operation === "preview" ? t("กำลังดำเนินการ…") : t("ตรวจข้อมูลก่อนนำเข้า (ไม่บันทึก)")}</button>
       <p className="text-xs leading-6 text-slate-500">{t("ไฟล์ตัวอย่างนี้มี Device name และข้อมูล MDM แต่ไม่มี IMEI/Serial/รุ่น/เบอร์โทร จึงเก็บช่องที่ไม่มีข้อมูลว่างไว้ ไม่มีการเดารุ่นหรือสร้าง IMEI สมมติ")}</p>
     </section>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{t(error)}</p>}
@@ -74,7 +79,7 @@ export function InventoryImport({ headers, onImported }: { headers: Record<strin
         <p className="text-sm leading-6 text-slate-600">{t("เครื่องที่นำเข้าจะอยู่ใน ")}<strong>{t("สต็อกส่วนกลาง · ยังไม่จัดสรรไซต์")}</strong>{t(" โดยไม่มีผู้ถือเครื่อง รายการซ้ำจะถูกข้าม และข้อมูลเดิมจะไม่ถูกแก้ทับ")}</p>
         {invalid.length > 0 && <p className="text-sm text-amber-700">{t("แถวที่มีข้อผิดพลาดจะไม่ถูกนำเข้า โปรดตรวจจำนวนพร้อมนำเข้าก่อนยืนยัน")}</p>}
         <label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" checked={confirmed} disabled={busy} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-blue-600" /><span>{t("ฉันตรวจข้อมูลแล้ว และต้องการบันทึก ")}{ready.length}{t(" เครื่องลงฐานข้อมูลจริง")}</span></label>
-        <button type="button" onClick={commit} disabled={busy || !confirmed || !ready.length || identifier !== preview.identifier || sheet !== preview.sheet} className="min-h-12 rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white disabled:bg-slate-200 disabled:text-slate-400">{busy ? t("กำลังบันทึก…") : `${t("ยืนยันนำเข้า")} ${ready.length} ${t("เครื่อง")}`}</button>
+        <button type="button" onClick={commit} disabled={busy || !confirmed || !ready.length || identifier !== preview.identifier || sheet !== preview.sheet} aria-busy={operation === "import"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white disabled:bg-slate-200 disabled:text-slate-400">{operation === "import" && <LoadingIcon />}{operation === "import" ? t("กำลังบันทึก…") : `${t("ยืนยันนำเข้า")} ${ready.length} ${t("เครื่อง")}`}</button>
         {(identifier !== preview.identifier || sheet !== preview.sheet) && <p className="text-sm text-amber-700">{t("เปลี่ยนการจับคู่แล้ว กรุณากดตรวจข้อมูลอีกครั้ง")}</p>}
       </section>}
     </>}
