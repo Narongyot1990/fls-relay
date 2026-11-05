@@ -40,6 +40,14 @@ test("password verification rejects incorrect values and non-string inputs", () 
   assert.equal(session.matchesTestPassword(password), true);
   for (const value of ["incorrect", null, {}, "x".repeat(257)]) assert.equal(session.matchesTestPassword(value), false);
 });
+test("CLI environment line endings are normalized without changing the entered password", () => {
+  process.env.INVENTORY_TEST_PASSWORD_HASH += "\r\n";
+  process.env.INVENTORY_SESSION_SECRET += "\n";
+  assert.equal(session.testAccessConfigured(), true);
+  assert.equal(session.matchesTestPassword(password), true);
+  assert.equal(session.matchesTestPassword(password + "\n"), false);
+  assert.equal(session.validTestSession(session.createTestSession()), true);
+});
 test("signed session expires after eight hours", () => {
   const now = 1000000000, token = session.createTestSession(now);
   assert.equal(session.validTestSession(token, now), true);
