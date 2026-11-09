@@ -42,6 +42,175 @@ const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
 const { validateSiteInput, validatePersonInput } = load('lib/directory.ts');
 
+const acknowledgement = { signature: 'data:image/png;base64,' + 'a'.repeat(80), acknowledged: true, policyLanguage: 'en', policyVersion: 'Professional_Smartphone_Handover_Bilingual_EN_TH-v1', accessories: [0, 1] };
+
+function custodyHarness(role = 'implementation', scoped = false) {
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  const siteId = new ObjectId(), driverId = new ObjectId();
+  const state = { devices: [
+    { _id: new ObjectId(), deviceId: 'OLD', active: true, status: 'assigned', currentHolderId: driverId, currentSiteId: siteId },
+    { _id: new ObjectId(), deviceId: 'NEW', active: true, status: 'in_site_stock', currentHolderId: null, currentSiteId: siteId },
+  ], events: [], failAudit: false, failIncoming: false };
+  const equal = (a, b) => String(a ?? '') === String(b ?? '');
+  const matches = (doc, filter) => Object.entries(filter).every(([key, value]) => key === '$or' ? value.some((sub) => matches(doc, sub)) : equal(doc[key], value));
+  const session = { withTransaction: async (fn) => {
+    const before = state.devices.map((doc) => ({ ...doc })), events = [...state.events];
+    try { return await fn(); } catch (error) { state.devices = before; state.events = events; throw error; }
+  } };
+  const devices = {
+    findOne: async (filter) => state.devices.find((doc) => matches(doc, filter)),
+    findOneAndUpdate: async (filter, change, options) => {
+      assert.equal(options.session, session, 'Device mutations must join the DB transaction');
+      if (state.failIncoming && equal(filter._id, state.devices[1]._id)) return null;
+      const index = state.devices.findIndex((doc) => matches(doc, filter));
+      if (index < 0) return null;
+      state.devices[index] = { ...state.devices[index], ...change.$set }; return state.devices[index];
+    },
+  };
+  const transactions = {
+    findOne: async (filter, options) => { assert.equal(options.session, session); return [...state.events].reverse().find((event) => matches(event, filter)) || null; },
+    insertMany: async (events, options) => { assert.equal(options.session, session); if (state.failAudit) throw Error('audit unavailable'); state.events.push(...events); },
+    insertOne: async (event, options) => transactions.insertMany([event], options),
+  };
+  const db = {
+    client: { withSession: (fn) => fn(session) },
+    collection: (name) => { assert.equal(name, 'holders'); return { findOne: async () => ({ _id: driverId, siteId, name: 'Actual Driver', active: true, type: 'driver' }) }; },
+  };
+  const access = load('lib/inventory-access.ts');
+  const local = loader({
+    '@/lib/db/mongodb': { getDb: async () => db },
+    '@/lib/db/inventory': { ...load('lib/db/inventory.ts'), inventoryCollection: async () => devices, ensureInventoryIndexes: async () => {} },
+    '@/lib/db/transactions': { transactionCollection: async () => transactions, ensureTransactionIndexes: async () => {} },
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role, siteId: scoped ? siteId.toHexString() : null, actor: 'operator-id' }) },
+  });
+  const post = async (route, body) => local(`app/api/inventory/${route}/route.ts`).POST(new Request(`http://localhost/api/inventory/${route}`, { method: 'POST', body: JSON.stringify(body) }));
+  return { state, post, siteId, driverId, exchange: () => ({ ...acknowledgement, driverId: driverId.toHexString(), returningDeviceId: state.devices[0]._id.toHexString(), newDeviceId: state.devices[1]._id.toHexString(), condition: 'damaged' }) };
+}
+
+test('exchange saves linked return/issue, driver signer and new acknowledgement together', async () => {
+  const { state, post, exchange } = custodyHarness('site_leader', true);
+  const response = await post('exchange', exchange());
+  assert.equal(response.status, 201);
+  assert.equal(state.devices[0].status, 'damaged'); assert.equal(state.devices[0].currentHolderId, null);
+  assert.equal(state.devices[1].status, 'assigned');
+  assert.equal(state.events.length, 2); assert.equal(state.events[0].replacementRef, state.events[1].replacementRef);
+  assert.equal(state.events[1].signerName, 'Actual Driver'); assert.equal(state.events[1].signature, acknowledgement.signature);
+  assert.equal(state.events[1].signerId, state.events[1].toHolderId);
+});
+
+test('exchange rolls back both phones and history when replacement or audit persistence fails', async () => {
+  for (const failure of ['failIncoming', 'failAudit']) {
+    const { state, post, exchange } = custodyHarness(); state[failure] = true;
+    const response = await post('exchange', exchange());
+    assert.ok(response.status >= 400);
+    assert.equal(state.devices[0].status, 'assigned'); assert.equal(state.devices[1].status, 'in_site_stock'); assert.equal(state.events.length, 0);
+  }
+});
+
+test('exchange rejects missing acknowledgement and devices outside Site Leader scope', async () => {
+  const { state, post, exchange, siteId } = custodyHarness('site_leader', true);
+  assert.equal((await post('exchange', { ...exchange(), signature: '' })).status, 400);
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  state.devices[0].currentSiteId = new ObjectId();
+  assert.equal((await post('exchange', exchange())).status, 403);
+  state.devices[0].currentSiteId = siteId;
+  state.devices[1].status = 'damaged';
+  assert.equal((await post('exchange', exchange())).status, 409);
+  assert.equal(state.events.length, 0);
+});
+
+test('recall requires reason, retains driver identity, and rolls back on audit failure', async () => {
+  const { state, post } = custodyHarness('system_admin');
+  const body = { deviceId: state.devices[0]._id.toHexString(), recall: true, reason: '   ', condition: 'ok' };
+  assert.equal((await post('return', body)).status, 400); assert.equal(state.devices[0].status, 'assigned');
+  body.reason = 'Employment ended'; state.failAudit = true;
+  assert.equal((await post('return', body)).status, 503); assert.equal(state.devices[0].status, 'assigned');
+  state.failAudit = false;
+  assert.equal((await post('return', body)).status, 200); assert.equal(state.devices[0].status, 'in_site_stock');
+  assert.equal(state.events[0].reason, body.reason); assert.equal(state.events[0].recall, true);
+  assert.ok(state.events[0].fromHolderId); assert.equal(state.events[0].actorRole, 'system_admin');
+});
+
+test('Site Leaders cannot recall phones outside their site', async () => {
+  const { state, post } = custodyHarness('site_leader', true);
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb'); state.devices[0].currentSiteId = new ObjectId();
+  assert.equal((await post('return', { deviceId: state.devices[0]._id.toHexString(), recall: true, reason: 'Recall', condition: 'ok' })).status, 403);
+  assert.equal(state.devices[0].status, 'assigned'); assert.equal(state.events.length, 0);
+});
+
+test('issue persists the driver as signer and rolls back the assignment if its audit fails', async () => {
+  for (const failAudit of [false, true]) {
+    const { state, post, driverId } = custodyHarness(); state.failAudit = failAudit;
+    const response = await post('issue', { ...acknowledgement, driverId: driverId.toHexString(), deviceId: state.devices[1]._id.toHexString() });
+    assert.equal(response.status, failAudit ? 503 : 201);
+    assert.equal(state.devices[1].status, failAudit ? 'in_site_stock' : 'assigned');
+    if (!failAudit) { assert.equal(state.events[0].signerName, 'Actual Driver'); assert.equal(state.events[0].signerId.toHexString(), driverId.toHexString()); }
+    else assert.equal(state.events.length, 0);
+  }
+});
+
+function seedAccessoryIssue(harness, accessories = [0, 1]) {
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  const issue = { _id: new ObjectId(), type: 'issue', deviceId: harness.state.devices[0]._id, toHolderId: harness.driverId, accessories, at: new Date() };
+  harness.state.events.push(issue);
+  return { assignmentId: issue._id.toHexString(), returnedAccessories: [...accessories], accessoriesChecked: true, accessoryNotes: '' };
+}
+
+test('return checks original issued accessories and retains complete and partial return snapshots', async () => {
+  for (const partial of [false, true]) {
+    const h = custodyHarness(); const checklist = seedAccessoryIssue(h);
+    if (partial) { checklist.returnedAccessories = [0]; checklist.accessoryNotes = 'USB cable lost'; }
+    const response = await h.post('return', { deviceId: h.state.devices[0]._id.toHexString(), condition: 'ok', ...checklist });
+    assert.equal(response.status, 200);
+    assert.deepEqual(h.state.events[1].issuedAccessories, [0, 1]);
+    assert.deepEqual(h.state.events[1].returnedAccessories, partial ? [0] : [0, 1]);
+    assert.deepEqual(h.state.events[1].missingAccessories, partial ? [1] : []);
+    assert.equal(h.state.events[1].accessoryNotes, checklist.accessoryNotes);
+  }
+});
+
+test('return rejects unchecked checklists, missing explanations, stale assignments and invented items', async () => {
+  for (const override of [{ accessoriesChecked: false }, { returnedAccessories: [0] }, { assignmentId: 'old-assignment' }, { returnedAccessories: [0, 4] }, { returnedAccessories: [20] }]) {
+    const h = custodyHarness(); const checklist = seedAccessoryIssue(h);
+    const response = await h.post('return', { deviceId: h.state.devices[0]._id.toHexString(), condition: 'ok', ...checklist, ...override });
+    assert.ok([400, 409].includes(response.status));
+    assert.equal(h.state.devices[0].status, 'assigned'); assert.equal(h.state.events.length, 1);
+  }
+});
+
+test('exchange keeps returned accessories separate from the replacement accessory kit', async () => {
+  const h = custodyHarness(); const checklist = seedAccessoryIssue(h);
+  const response = await h.post('exchange', { ...h.exchange(), ...checklist, returnedAccessories: [0], accessoryNotes: 'USB cable lost', accessories: [2, 4] });
+  assert.equal(response.status, 201);
+  assert.deepEqual(h.state.events[1].issuedAccessories, [0, 1]); assert.deepEqual(h.state.events[1].missingAccessories, [1]);
+  assert.deepEqual(h.state.events[2].accessories, [2, 4]);
+  assert.equal(h.state.events[1].replacementRef, h.state.events[2].replacementRef);
+});
+
+test('unknown legacy checklists stay unknown rather than claiming no accessories or complete receipt', async () => {
+  const h = custodyHarness();
+  assert.equal((await h.post('return', { deviceId: h.state.devices[0]._id.toHexString(), condition: 'ok', accessoryNotes: 'Original checklist unavailable' })).status, 200);
+  assert.equal(h.state.events[0].issuedAccessories, undefined); assert.equal(h.state.events[0].missingAccessories, undefined); assert.equal(h.state.events[0].accessoriesChecked, false);
+});
+
+test('history exposes accessory evidence without exposing driver signature images', () => {
+  const h = custodyHarness(); const input = seedAccessoryIssue(h); const issue = h.state.events[0];
+  const { custodyTransactionItem } = load('lib/db/transactions.ts');
+  const row = custodyTransactionItem({ ...issue, fromSiteId: null, toSiteId: h.siteId, fromHolderId: null, actor: 'operator', actorRole: 'site_leader', signature: 'private-signature' });
+  assert.deepEqual(row.accessories, [0, 1]); assert.equal('signature' in row, false); assert.ok(input.assignmentId);
+});
+
+test('inventory recovers persisted original accessories only for the current holder', async () => {
+  const h = custodyHarness(); const input = seedAccessoryIssue(h); const issue = h.state.events[0];
+  const { inventoryItem } = load('lib/db/inventory.ts');
+  const { withAssignments } = loader({ '@/lib/db/transactions': { transactionCollection: async () => ({ aggregate: () => ({ toArray: async () => [{ _id: issue.deviceId, assignment: { id: issue._id, holderId: h.driverId, accessories: [0, 1], at: issue.at } }] }) }) } })('lib/db/accessories.ts');
+  const result = await withAssignments(h.state.devices.map(inventoryItem));
+  assert.deepEqual(result[0].assignment.accessories, [0, 1]); assert.equal(result[0].assignment.id, input.assignmentId);
+  assert.equal(result[1].assignment, undefined);
+  const mismatch = await withAssignments([{ ...inventoryItem(h.state.devices[0]), holderId: 'another-holder' }]);
+  assert.equal(mismatch[0].assignment, undefined);
+});
+
 test('directory validation requires stable site codes, employee IDs and existing site references', () => {
   assert.deepEqual(validateSiteInput({ code: ' qa-site ', name: ' Yard ' }), { code: 'QA-SITE', name: 'Yard' });
   assert.throws(() => validateSiteInput({ code: 'bad code', name: 'Yard' }));

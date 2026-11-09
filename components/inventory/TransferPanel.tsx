@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send } from "@/components/shared/BrandIcon";
 import type { InventoryItem } from "@/lib/inventory";
 import type { DirectorySite } from "@/lib/directory";
 import { useLanguage } from "@/components/shared/LanguageProvider";

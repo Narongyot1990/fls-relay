@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Plus, Search, Users } from "lucide-react";
+import { MapPin, Plus, Search, Users } from "@/components/shared/BrandIcon";
 import { useLanguage } from "@/components/shared/LanguageProvider";
 import type { DirectoryPerson, DirectorySite } from "@/lib/directory";
 import { LoadingIcon } from "./LoadingIcon";

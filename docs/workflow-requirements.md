@@ -1,5 +1,12 @@
 # Workflow baseline and user structure
 
+**9 November 2026 update:** The new lifecycle UI and APIs now support driver
+assignment indicators, inventory status filters, returns/recalls with reasons,
+signed exchanges, explicit driver signer snapshots and grouped transaction history.
+See [lifecycle-updates.md](./lifecycle-updates.md). Older preview-only and disabled
+Submit descriptions below are historical. Handover PDF generation and authenticated
+accounts remain outside this implementation.
+
 **Current implementation:** `/preview` reads real MongoDB data while retaining the reviewed role-specific colored card Home and handover UI. The new interface defaults to EN and supports a shared EN/TH switch. Sample devices/sites/drivers and simulated success remain removed. The handover review uses real records or an explicitly blank form and all eight bilingual sections of the supplied `Professional_Smartphone_Handover_Bilingual_EN_TH.docx`, including accessories and its acknowledgement wording. Signatures remain temporary on screen; Submit remains disabled. Inventory/Import/CRUD continue through the existing live APIs. Historical UI-preview descriptions below document earlier iterations. See [inventory-testing.md](./inventory-testing.md) for the current import/CRUD workflow and verification limits. No user inventory file has been committed to the database by the agent.
 
 Source: `D:\projects\webApp\Driver_Phone_Issuing__Return_Process.pdf`, 5 pages, document dated 5 October 2026. Reviewed 5 November 2026.

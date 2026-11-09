@@ -14,7 +14,18 @@ export interface CustodyTransactionDoc {
   condition?: "ok" | "damaged";
   signature?: string;
   accessories?: number[];
+  assignmentId?: ObjectId;
+  issuedAccessories?: number[];
+  returnedAccessories?: number[];
+  missingAccessories?: number[];
+  accessoriesChecked?: boolean;
+  accessoryNotes?: string;
   policyVersion?: string;
+  policyLanguage?: "en" | "th";
+  signerId?: ObjectId;
+  signerName?: string;
+  reason?: string;
+  recall?: boolean;
   replacementRef?: string;
   actorRole: string;
   actor: string;
@@ -25,6 +36,8 @@ export interface CustodyTransactionItem {
   id: string; type: CustodyTransactionType; deviceId: string;
   fromSiteId: string | null; toSiteId: string | null; fromHolderId: string | null; toHolderId: string | null;
   condition?: "ok" | "damaged"; actorRole: string; actor: string; at: string;
+  reason?: string; recall?: boolean; replacementRef?: string; signerName?: string; policyLanguage?: "en" | "th";
+  accessories?: number[]; issuedAccessories?: number[]; returnedAccessories?: number[]; missingAccessories?: number[]; accessoriesChecked?: boolean; accessoryNotes?: string;
 }
 
 export function custodyTransactionItem(doc: CustodyTransactionDoc): CustodyTransactionItem {
@@ -33,6 +46,9 @@ export function custodyTransactionItem(doc: CustodyTransactionDoc): CustodyTrans
     fromSiteId: doc.fromSiteId?.toHexString() ?? null, toSiteId: doc.toSiteId?.toHexString() ?? null,
     fromHolderId: doc.fromHolderId?.toHexString() ?? null, toHolderId: doc.toHolderId?.toHexString() ?? null,
     condition: doc.condition, actorRole: doc.actorRole, actor: doc.actor, at: doc.at.toISOString(),
+    reason: doc.reason, recall: doc.recall, replacementRef: doc.replacementRef, signerName: doc.signerName, policyLanguage: doc.policyLanguage,
+    accessories: doc.accessories, issuedAccessories: doc.issuedAccessories, returnedAccessories: doc.returnedAccessories,
+    missingAccessories: doc.missingAccessories, accessoriesChecked: doc.accessoriesChecked, accessoryNotes: doc.accessoryNotes,
   };
 }
 

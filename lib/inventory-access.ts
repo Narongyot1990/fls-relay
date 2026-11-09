@@ -8,7 +8,7 @@ export class InventoryError extends Error {
 }
 
 /** Public testing mode: role headers select a workflow, not an authenticated identity. */
-export async function inventoryAccess(request: Request, write: boolean | "directory" | "custody" = false) {
+export async function inventoryAccess(request: Request, write: boolean | "directory" | "custody" | "recall" = false) {
   if (write && process.env.NODE_ENV === "production" && request.headers.get("origin") !== new URL(request.url).origin) throw new InventoryError("Request origin is not allowed", 403);
   const role = request.headers.get("x-inventory-role") as InventoryRole | null;
   if (!role || !["it", "implementation", "site_leader", "system_admin"].includes(role)) throw new InventoryError("Select an operator role", 403);

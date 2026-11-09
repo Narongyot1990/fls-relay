@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "@/components/shared/BrandIcon";
 import type { InventoryItem } from "@/lib/inventory";
 import { useLanguage } from "@/components/shared/LanguageProvider";
 import { LoadingIcon } from "./LoadingIcon";

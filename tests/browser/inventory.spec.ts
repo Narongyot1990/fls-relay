@@ -14,6 +14,7 @@ async function harness(page: Page) {
     sites: [{ id: "aaaaaaaaaaaaaaaaaaaaaaaa", code: "QA", name: "Browser test site", active: true }] as DirectorySite[],
     people: [] as DirectoryPerson[],
     deleteRequests: 0, siteRequests: 0, personRequests: 0, patchRequests: 0, transferRequests: 0, historyRequests: 0,
+    returnRequests: [] as Record<string, unknown>[], exchangeRequests: [] as Record<string, unknown>[], issueRequests: [] as Record<string, unknown>[], history: [] as Record<string, unknown>[],
     deleteGate: undefined as Promise<void> | undefined, siteGate: undefined as Promise<void> | undefined,
     readGate: undefined as Promise<void> | undefined, patchGate: undefined as Promise<void> | undefined,
     previewGate: undefined as Promise<void> | undefined, transferGate: undefined as Promise<void> | undefined, rejectDelete: false,
@@ -63,7 +64,17 @@ async function harness(page: Page) {
     }
     if (url.pathname === "/api/inventory/history" && method === "GET") {
       state.historyRequests++;
-      return json(200, { transactions: [] });
+      return json(200, { transactions: state.history });
+    }
+    if (url.pathname === "/api/inventory/return" && method === "POST") {
+      const body = request.postDataJSON(); state.returnRequests.push(body);
+      state.devices = state.devices.map((device) => device.id === body.deviceId ? { ...device, status: body.condition === "damaged" ? "damaged" : "in_site_stock", holderId: null } : device);
+      return json(200, { device: state.devices.find((device) => device.id === body.deviceId) });
+    }
+    if (["/api/inventory/issue", "/api/inventory/exchange"].includes(url.pathname) && method === "POST") {
+      const body = request.postDataJSON();
+      (url.pathname.endsWith("exchange") ? state.exchangeRequests : state.issueRequests).push(body);
+      return json(201, { recorded: true });
     }
     return json(501, { error: "Unexpected browser-test API request; blocked" });
   });
@@ -200,4 +211,121 @@ test("History loads the real scoped ledger", async ({ page }) => {
   await page.goto("/preview"); await tab(page, "History / Documents");
   await expect(page.getByText("No history in this scope yet.", { exact: true })).toBeVisible();
   expect(state.historyRequests).toBeGreaterThanOrEqual(1);
+});
+
+async function lifecycle(page: Page) {
+  const state = await harness(page);
+  state.people = [
+    { id: "dddddddddddddddddddddddd", name: "Driver With Phone", employeeNo: "FLS-001", siteId: state.sites[0].id, type: "driver", active: true, phone: "" },
+    { id: "eeeeeeeeeeeeeeeeeeeeeeee", name: "Driver Without Phone", employeeNo: "FLS-002", siteId: state.sites[0].id, type: "driver", active: true, phone: "" },
+    { id: "ffffffffffffffffffffffff", name: "Site Leader Person", employeeNo: "FLS-SL", siteId: state.sites[0].id, type: "site_leader", active: true, phone: "" },
+  ];
+  state.devices = state.devices.slice(0, 4).map((device, index) => ({ ...device, model: `Model ${index + 1}`, siteId: state.sites[0].id,
+    status: index === 0 ? "assigned" : index === 3 ? "damaged" : "in_site_stock", holderId: index === 0 ? state.people[0].id : null }));
+  return state;
+}
+
+test("Inventory cards filter the list and combine with search on mobile and desktop", async ({ page }) => {
+  await lifecycle(page); await page.goto("/preview"); await tab(page, "Devices");
+  await page.getByRole("button", { name: "Assigned 1", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "TEST-001", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "TEST-002", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "In stock 2", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(2);
+  await page.getByRole("textbox").fill("TEST-003");
+  await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(1);
+  await page.getByRole("textbox").clear();
+  await page.getByRole("button", { name: "Total 4", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(4);
+  await page.screenshot({ path: "test-results/inventory-mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.screenshot({ path: "test-results/inventory-desktop.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("Issue shows assignment badges, toggles and phone details without selecting the driver", async ({ page }) => {
+  await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("implementation"); await tab(page, "Issue to driver");
+  await page.getByRole("button", { name: "Has phone", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Driver Without Phone FLS/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Phone details for Driver With Phone", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Model 1");
+  await expect(page.getByRole("dialog")).toContainText("TEST-001");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "No phone", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Driver With Phone FLS/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Driver Without Phone FLS/ })).toBeVisible();
+});
+
+for (const role of ["it", "implementation", "site_leader", "system_admin"]) {
+  test(`${role} can recall a phone with a required reason and damaged condition`, async ({ page }) => {
+    const state = await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption(role); await tab(page, "Return");
+    await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
+    if (role === "implementation" || role === "site_leader") await page.getByRole("button", { name: "Recall phone", exact: true }).click();
+    const confirm = page.getByRole("button", { name: "Confirm recall and receipt", exact: true });
+    await expect(confirm).toBeDisabled();
+    await page.getByLabel("Recall reason (required)").fill("Employment ended");
+    await page.getByText("Damaged", { exact: true }).click();
+    await confirm.click();
+    await expect(page.getByText("Return recorded.", { exact: true })).toBeVisible();
+    expect(state.returnRequests).toHaveLength(1);
+    expect(state.returnRequests[0]).toMatchObject({ recall: true, reason: "Employment ended", condition: "damaged", deviceId: state.devices[0].id });
+    expect(state.devices[0].status).toBe("damaged"); expect(state.devices[0].holderId).toBeNull();
+  });
+}
+
+test("Exchange lists drivers immediately and requires the driver's new acknowledgement", async ({ page }) => {
+  const state = await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("site_leader"); await tab(page, "Exchange");
+  await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
+  await page.getByRole("button", { name: /TEST-002/ }).click();
+  await page.getByRole("button", { name: "Continue · Sign for replacement", exact: true }).click();
+  const submit = page.getByRole("button", { name: "Submit · Confirm receipt", exact: true });
+  await expect(submit).toBeDisabled(); expect(state.exchangeRequests).toHaveLength(0);
+  await expect(page.getByRole("heading", { name: "Receipt signed by · Driver", exact: true }).locator("..")).toContainText("Driver With Phone");
+  await expect(page.getByRole("heading", { name: "Issuing operator · Company representative", exact: true }).locator("..")).toContainText("Site Leader Person");
+  const canvas = page.locator("canvas"); await canvas.scrollIntoViewIfNeeded(); const box = await canvas.boundingBox();
+  await page.mouse.move(box!.x + 25, box!.y + 25); await page.mouse.down(); await page.mouse.move(box!.x + 100, box!.y + 70, { steps: 8 }); await page.mouse.up();
+  await page.getByRole("checkbox").last().check();
+  await submit.click();
+  await expect(page.getByText("Handover recorded", { exact: true })).toBeVisible();
+  expect(state.exchangeRequests).toHaveLength(1);
+  expect(state.exchangeRequests[0]).toMatchObject({ driverId: state.people[0].id, returningDeviceId: state.devices[0].id, newDeviceId: state.devices[1].id, acknowledged: true, policyLanguage: "en" });
+  expect(String(state.exchangeRequests[0].signature)).toMatch(/^data:image\/png;base64,/);
+});
+
+test("History groups by phone model, expands transactions and uses Thailand dates", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-09T03:30:00.000Z") });
+  const state = await lifecycle(page);
+  state.history = [
+    { id: "event-2", deviceId: state.devices[0].id, deviceLabel: "TEST-001", model: "Model 1", type: "return", recall: true, reason: "Employment ended", fromHolderName: "Driver With Phone", toHolderName: null, actorRole: "it", at: "2026-11-08T03:30:00.000Z" },
+    { id: "event-1", deviceId: state.devices[0].id, deviceLabel: "TEST-001", model: "Model 1", type: "issue", signerName: "Driver With Phone", actorRole: "site_leader", at: "2026-11-01T03:30:00.000Z" },
+  ];
+  await page.goto("/preview"); await tab(page, "History / Documents");
+  const summary = page.locator("summary"); await expect(summary).toHaveCount(1); await expect(summary).toContainText("Model 1");
+  await expect(summary).toContainText("08/Nov/2026 10:30");
+  await expect(summary).toContainText("Last update 1d");
+  await expect(page.getByText("Reason / notes: Employment ended", { exact: true })).toBeHidden();
+  await summary.click(); await expect(page.getByText("Reason / notes: Employment ended", { exact: true })).toBeVisible();
+  await expect(page.getByText("Receipt signed by · Driver: Driver With Phone", { exact: true })).toBeVisible();
+  await summary.click(); await expect(page.getByText("Reason / notes: Employment ended", { exact: true })).toBeHidden();
+});
+
+test("Normal return can choose between multiple assigned phones and keeps the other assignment", async ({ page }) => {
+  const state = await lifecycle(page);
+  state.devices[1] = { ...state.devices[1], status: "assigned", holderId: state.people[0].id };
+  await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("implementation"); await tab(page, "Return");
+  await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
+  await page.getByLabel("Returning phone", { exact: true }).selectOption(state.devices[1].id);
+  await page.getByRole("button", { name: "Record return", exact: true }).click();
+  await expect(page.getByText("Return recorded.", { exact: true })).toBeVisible();
+  expect(state.devices[0].status).toBe("assigned"); expect(state.devices[1].status).toBe("in_site_stock");
+  expect(state.returnRequests[0]).toMatchObject({ deviceId: state.devices[1].id, recall: false });
+});
+
+test("Thai inventory labels and assignment toggles remain readable", async ({ page }) => {
+  await lifecycle(page); await page.goto("/preview");
+  await page.getByRole("button", { name: "TH", exact: true }).click();
+  await page.getByRole("navigation").getByRole("button", { name: "อุปกรณ์", exact: true }).click();
+  await page.getByRole("button", { name: "จ่ายแล้ว 1", exact: true }).click();
+  await expect(page.getByText("แสดง 1 จาก 4 เครื่อง", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/inventory-thai.png", fullPage: true });
 });

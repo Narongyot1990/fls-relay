@@ -14,7 +14,10 @@ export async function GET(request: Request) {
     if (!["all", "central"].includes(site) && !ObjectId.isValid(site)) throw new InventoryError("Invalid site");
     const transactions = await transactionCollection();
     const siteFilter = site === "all" ? {} : site === "central" ? { fromSiteId: null, toSiteId: null } : { $or: [{ fromSiteId: new ObjectId(site) }, { toSiteId: new ObjectId(site) }] };
-    const rows = await transactions.find(siteFilter).sort({ at: -1 }).limit(LIMIT).toArray();
+    const offset = Number(new URL(request.url).searchParams.get("offset") || "0");
+    if (!Number.isSafeInteger(offset) || offset < 0) throw new InventoryError("Invalid history offset");
+    const page = await transactions.find(siteFilter).sort({ at: -1, _id: -1 }).skip(offset).limit(LIMIT + 1).toArray();
+    const rows = page.slice(0, LIMIT);
     const db = await getDb();
     const deviceIds = [...new Set(rows.map((row) => row.deviceId.toHexString()))].map((id) => new ObjectId(id));
     const holderIds = [...new Set(rows.flatMap((row) => [row.fromHolderId?.toHexString(), row.toHolderId?.toHexString()]).filter((id): id is string => Boolean(id)))].map((id) => new ObjectId(id));
@@ -25,12 +28,15 @@ export async function GET(request: Request) {
       db.collection("sites").find({ _id: { $in: siteIds } }).toArray(),
     ]);
     const deviceLabel = new Map(devices.map((device) => [String(device._id), String(device.deviceId ?? device.imei ?? device._id)]));
+    const deviceModel = new Map(devices.map((device) => [String(device._id), String(device.model || device.deviceName || "")]));
     const holderName = new Map(holders.map((holder) => [String(holder._id), String(holder.name)]));
     const siteName = new Map(sites.map((item) => [String(item._id), String(item.name)]));
     return Response.json({
+      hasMore: page.length > LIMIT,
       transactions: rows.map((row) => ({
         ...custodyTransactionItem(row),
         deviceLabel: deviceLabel.get(row.deviceId.toHexString()) ?? "—",
+        model: deviceModel.get(row.deviceId.toHexString()) ?? "",
         fromHolderName: row.fromHolderId ? holderName.get(row.fromHolderId.toHexString()) ?? "—" : null,
         toHolderName: row.toHolderId ? holderName.get(row.toHolderId.toHexString()) ?? "—" : null,
         fromSiteName: row.fromSiteId ? siteName.get(row.fromSiteId.toHexString()) ?? "—" : null,

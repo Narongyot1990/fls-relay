@@ -128,3 +128,5 @@
     @apply font-sans;
   }
 }
+/* Keep generated pictograms legible inside primary action buttons. */
+button[class*="bg-blue-600"] > .fls-icon, button[class*="bg-red-600"] > .fls-icon { filter: brightness(0) invert(1); }

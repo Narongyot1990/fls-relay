@@ -1,3 +1,4 @@
+import { withAssignments } from "@/lib/db/accessories";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db/mongodb";
 import { inventoryCollection, inventoryItem, ensureInventoryIndexes, manualDocument } from "@/lib/db/inventory";
@@ -12,14 +13,17 @@ export async function GET(request: Request) {
     if (!["all", "central"].includes(site) && !ObjectId.isValid(site)) throw new InventoryError("Invalid site");
     const siteQuery = site === "all" ? {} : { currentSiteId: site === "central" ? null : new ObjectId(site) };
     const db = await getDb();
-    const [devices, sites, holders, leaders] = await Promise.all([
+    const [devices, sites, holders, leaders, assignedDevices] = await Promise.all([
       (await inventoryCollection()).find({ active: true, ...siteQuery }).sort({ deviceId: 1, model: 1 }).toArray(),
       db.collection("sites").find(access.siteId ? { _id: new ObjectId(access.siteId) } : {}).toArray(),
-      db.collection("holders").find(site !== "all" && site !== "central" ? { siteId: new ObjectId(site) } : site === "central" ? { _id: { $exists: false } } : {}).toArray(),
+      db.collection("holders").find(site !== "all" && site !== "central" ? { siteId: new ObjectId(site) } : {}).toArray(),
       db.collection("holders").find({ type: "site_leader", active: true, ...(access.siteId ? { _id: new ObjectId(access.actor) } : {}) }).toArray(),
+      (await inventoryCollection()).find({ active: true, status: "assigned", ...(site === "central" ? {} : siteQuery) }).toArray(),
     ]);
+    const enrichedAssignments = await withAssignments(assignedDevices.map(inventoryItem));
+    const assignmentById = new Map(enrichedAssignments.map((item) => [item.id, item]));
     const person = (item: typeof holders[number]) => ({ id: String(item._id), name: String(item.name), type: String(item.type), employeeNo: String(item.employeeNo ?? ""), siteId: String(item.siteId), phone: String(item.phone ?? ""), active: item.active === true });
-    return Response.json({ devices: devices.map(inventoryItem), sites: sites.map((item) => ({ id: String(item._id), code: String(item.code ?? ""), name: String(item.name), active: item.active === true })), holders: holders.map(person), leaders: leaders.map(person), assignedSite: access.siteId }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ devices: devices.map((doc) => assignmentById.get(doc._id.toHexString()) || inventoryItem(doc)), assignedDevices: enrichedAssignments, sites: sites.map((item) => ({ id: String(item._id), code: String(item.code ?? ""), name: String(item.name), active: item.active === true })), holders: holders.map(person), leaders: leaders.map(person), assignedSite: access.siteId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return inventoryFailure(error); }
 }
 

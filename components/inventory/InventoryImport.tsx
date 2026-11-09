@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileSpreadsheet, Upload, CheckCircle2 } from "lucide-react";
+import { FileSpreadsheet, Upload, CheckCircle2 } from "@/components/shared/BrandIcon";
 import type { ImportPreview } from "@/lib/inventory";
 import { useLanguage } from "@/components/shared/LanguageProvider";
 import { LoadingIcon } from "./LoadingIcon";

@@ -13,6 +13,7 @@ export interface InventoryItem {
   status: string;
   siteId: string | null;
   holderId: string | null;
+  assignment?: import("./accessories").AssignmentSummary;
   importSource?: string;
   mdm: Record<string, string | null>;
 }

@@ -1,5 +1,10 @@
 # ทดสอบ Inventory / Import กับฐานข้อมูลจริง
 
+อัปเดต 9 พฤศจิกายน 2026: Inventory filters, สถานะการรับเครื่องของคนขับ,
+Return/Recall, Exchange พร้อมลายเซ็นใหม่ และประวัติแบบหุบ/ขยายใช้งานผ่าน API แล้ว
+ดูพฤติกรรม สิทธิ์ และขอบเขตการทดสอบล่าสุดใน [lifecycle-updates.md](./lifecycle-updates.md)
+รายละเอียดเดิมด้านล่างที่กล่าวว่า Submit ถูกปิดและ Return/Exchange เป็นโครงหน้าถูกแทนที่ด้วยอัปเดตนี้
+
 เปิด `http://localhost:3000/preview` เลือก IT หรือ Implementation แล้วเลือก **นำเข้า CSV / Excel**
 
 ## สิ่งที่เปลี่ยน
