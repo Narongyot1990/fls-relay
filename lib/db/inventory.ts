@@ -4,7 +4,7 @@ import type { InventoryItem, ImportRow } from "@/lib/inventory";
 
 export interface InventoryDoc {
   _id: ObjectId; deviceId?: string; deviceIdKey?: string; deviceName?: string;
-  imei?: string; serial?: string; model?: string; phoneNumber?: string;
+  imei?: string; serial?: string; model?: string; manufacturer?: string; phoneNumber?: string;
   status: string; currentSiteId: ObjectId | null; currentHolderId: ObjectId | null;
   registeredAt?: Date; active: boolean; importSource?: string;
   mdm?: Record<string, string | null>; lastActivity?: unknown;
@@ -16,7 +16,7 @@ export function inventoryItem(doc: InventoryDoc): InventoryItem {
   const times = [doc.updatedAt, activity, doc.registeredAt].flatMap((value) => value instanceof Date || typeof value === "string" ? [new Date(value).getTime()] : []).filter(Number.isFinite);
   return { id: doc._id.toHexString(), deviceId: doc.deviceId ?? doc.imei ?? doc._id.toHexString(),
     deviceName: doc.deviceName ?? doc.mdm?.deviceName ?? "", imei: doc.imei ?? "", serial: doc.serial ?? "",
-    model: doc.model ?? "", phoneNumber: doc.phoneNumber ?? "", status: doc.status,
+    manufacturer: doc.manufacturer ?? "", model: doc.model ?? "", phoneNumber: doc.phoneNumber ?? "", status: doc.status,
     siteId: doc.currentSiteId?.toHexString() ?? null, holderId: doc.currentHolderId?.toHexString() ?? null,
     updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : undefined,
     importSource: doc.importSource, mdm: doc.mdm ?? {} };
@@ -47,12 +47,12 @@ export async function existingImportIds(rows: ImportRow[]) {
 }
 
 export interface ManualDeviceInput {
-  deviceId: string; deviceName?: string; model?: string; imei?: string; serial?: string; phoneNumber?: string;
+  deviceId: string; deviceName?: string; manufacturer?: string; model?: string; imei?: string; serial?: string; phoneNumber?: string;
 }
 
 export function manualDocument(input: ManualDeviceInput): InventoryDoc {
   return { _id: new ObjectId(), deviceId: input.deviceId, deviceIdKey: input.deviceId.toLowerCase(),
-    deviceName: input.deviceName ?? "", model: input.model ?? "", imei: input.imei || undefined, serial: input.serial || undefined,
+    deviceName: input.deviceName ?? "", manufacturer: input.manufacturer ?? "", model: input.model ?? "", imei: input.imei || undefined, serial: input.serial || undefined,
     phoneNumber: input.phoneNumber ?? "", status: "registered", currentSiteId: null, currentHolderId: null,
     registeredAt: new Date(), active: true, importSource: "manual", mdm: {} };
 }

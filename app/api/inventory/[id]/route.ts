@@ -9,7 +9,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!ObjectId.isValid(id)) throw new InventoryError("Invalid record ID");
     const body = await request.json();
     const set: Record<string, string> = {}, unset: Record<string, ""> = {};
-    for (const key of ["deviceId", "deviceName", "model", "phoneNumber", "imei", "serial"]) {
+    for (const key of ["deviceId", "deviceName", "manufacturer", "model", "phoneNumber", "imei", "serial"]) {
       if (!(key in body)) continue;
       if (typeof body[key] !== "string" || body[key].trim().length > 200) throw new InventoryError(`Invalid ${key}`);
       const value = body[key].trim();

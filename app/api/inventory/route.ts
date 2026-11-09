@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   try {
     await inventoryAccess(request, true);
     const body = await request.json();
-    const fields = ["deviceId", "deviceName", "model", "imei", "serial", "phoneNumber"] as const;
+    const fields = ["deviceId", "deviceName", "manufacturer", "model", "imei", "serial", "phoneNumber"] as const;
     const input: Partial<Record<(typeof fields)[number], string>> = {};
     for (const key of fields) {
       if (!(key in body)) continue;

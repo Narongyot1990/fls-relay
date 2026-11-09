@@ -8,8 +8,8 @@ import { LoadingIcon } from "./LoadingIcon";
 
 const input = "mt-2 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-base disabled:bg-slate-50";
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-50";
-const fields = ["deviceId", "deviceName", "model", "imei", "serial", "phoneNumber"] as const;
-const empty = { deviceId: "", deviceName: "", model: "", imei: "", serial: "", phoneNumber: "" };
+const fields = ["deviceId", "deviceName", "manufacturer", "model", "imei", "serial", "phoneNumber"] as const;
+const empty = { deviceId: "", deviceName: "", manufacturer: "", model: "", imei: "", serial: "", phoneNumber: "" };
 
 export function ManualDeviceAdd({ headers, onAdded }: { headers: Record<string, string>; onAdded: () => void }) {
   const { t } = useLanguage();
@@ -18,7 +18,7 @@ export function ManualDeviceAdd({ headers, onAdded }: { headers: Record<string, 
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<InventoryItem | null>(null);
   const labels: Record<(typeof fields)[number], string> = {
-    deviceId: "Device ID", deviceName: t("ชื่อเครื่อง", "Device name"), model: t("รุ่น", "Model"),
+    deviceId: "Device ID", deviceName: t("ชื่อเครื่อง", "Device name"), manufacturer: t("ผู้ผลิต", "Manufacturer"), model: t("รุ่น", "Model"),
     imei: t("IMEI (ไม่บังคับ)", "IMEI (optional)"), serial: t("Serial (ไม่บังคับ)", "Serial (optional)"), phoneNumber: t("เบอร์โทรศัพท์", "Phone number"),
   };
 

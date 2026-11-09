@@ -7,6 +7,7 @@ export interface InventoryItem {
   deviceId: string;
   deviceName: string;
   model: string;
+  manufacturer?: string;
   imei: string;
   serial: string;
   phoneNumber: string;

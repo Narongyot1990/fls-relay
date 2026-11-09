@@ -216,6 +216,19 @@ test("History loads the real scoped ledger", async ({ page }) => {
   expect(state.historyRequests).toBeGreaterThanOrEqual(1);
 });
 
+test("Manufacturer is visible in phone details and can be edited for future individual additions", async ({ page }) => {
+  const state = await harness(page); state.devices[0].manufacturer = "Samsung";
+  await page.goto("/preview"); await tab(page, "Devices");
+  await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+  await expect(page.getByLabel("Manufacturer", { exact: true })).toHaveValue("Samsung");
+  await page.getByLabel("Manufacturer", { exact: true }).fill("Updated manufacturer");
+  await page.getByRole("button", { name: "Save to database", exact: true }).click();
+  await expect(page.getByText("Device details saved.", { exact: true })).toBeVisible();
+  expect(state.devices[0].manufacturer).toBe("Updated manufacturer");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByLabel("Manufacturer", { exact: true })).toBeVisible();
+});
+
 async function lifecycle(page: Page) {
   const state = await harness(page);
   state.people = [

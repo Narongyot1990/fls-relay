@@ -7,6 +7,7 @@ import Module from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import ExcelJS from 'exceljs';
+import { buildPlan } from './migrate-phone-list.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function loader(overrides = {}) {
@@ -41,6 +42,39 @@ const { parseInventoryCsv } = load('lib/inventory-csv.ts');
 const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
 const { validateSiteInput, validatePersonInput } = load('lib/directory.ts');
+
+test('IT phone-list migration preserves supplied fields and leaves all phone assignments blank', () => {
+  const header = 'Device name,Serial number,Manufacturer,Model,Driver Id,Driver name,Driver Site\n';
+  const source = Buffer.from(header + 'PHONE,SERIAL-A,Samsung,SM-TEST,fls1, QA Driver ,CPO_CHO\nPHONE,SERIAL-B,Samsung,SM-TEST,FLS1,QA Driver,CPO_CHO\nPHONE,SERIAL-C,Samsung,SM-TEST,,,\n');
+  const plan = buildPlan(source, 'fixture.csv', new Date('2026-11-09T00:00:00Z'));
+  assert.equal(plan.devices.length, 3); assert.equal(plan.holders.length, 1); assert.equal(plan.models.length, 1);
+  assert.equal(plan.devices[0].deviceId, 'SERIAL-A'); assert.equal(plan.devices[0].deviceName, 'PHONE'); assert.equal(plan.devices[0].manufacturer, 'Samsung'); assert.equal(plan.devices[0].model, 'SM-TEST');
+  assert.ok(plan.devices.every((doc) => doc.currentHolderId === null && doc.currentSiteId === null && doc.status === 'registered' && !doc.imei && !doc.phoneNumber));
+  assert.equal(plan.holders[0].name, 'QA Driver'); assert.equal(plan.holders[0].employeeNo, 'FLS1');
+  assert.equal(plan.sites.find((site) => site._id.equals(plan.holders[0].siteId)).code, 'CPO_CHO');
+  assert.deepEqual(plan.sites.map(({ code, name }) => ({ code, name })), [{ code: 'CPO_CHO', name: 'CPOCHO' }, { code: 'CPO_MTP', name: 'CPOMTP' }]);
+});
+
+test('IT phone-list migration refuses duplicate serials, conflicting identities and incomplete supplied driver rows', () => {
+  const header = 'Device name,Serial number,Manufacturer,Model,Driver Id,Driver name,Driver Site\n';
+  for (const rows of ['P,S1,Samsung,M,,,\nP,s1,Samsung,M,,,\n', 'P,S1,Samsung,M,F1,QA,CPO_CHO\nP,S2,Samsung,M,F1,Another,CPO_CHO\n', 'P,S1,Samsung,M,F1,,CPO_CHO\n', 'P,S1,Samsung,M,F1,QA,UNKNOWN\n']) assert.throws(() => buildPlan(Buffer.from(header + rows), 'fixture.csv'));
+});
+
+test('manual creation and metadata edits persist Manufacturer as a first-class phone field', async () => {
+  let stored;
+  const actual = load('lib/db/inventory.ts');
+  const access = load('lib/inventory-access.ts');
+  const collection = {
+    findOne: async (filter) => filter._id && stored ? stored : null,
+    insertOne: async (doc) => { stored = doc; },
+    findOneAndUpdate: async (_filter, change) => { Object.assign(stored, change.$set); return stored; },
+  };
+  const local = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) }, '@/lib/db/inventory': { ...actual, inventoryCollection: async () => collection, ensureInventoryIndexes: async () => {} } });
+  const created = await local('app/api/inventory/route.ts').POST(new Request('http://localhost/api/inventory', { method: 'POST', body: JSON.stringify({ deviceId: 'QA-SERIAL', deviceName: 'QA-PHONE', serial: 'QA-SERIAL', manufacturer: ' Samsung ', model: 'SM-TEST' }) }));
+  assert.equal(created.status, 201); assert.equal((await created.json()).device.manufacturer, 'Samsung');
+  const edited = await local('app/api/inventory/[id]/route.ts').PATCH(new Request(`http://localhost/api/inventory/${stored._id}`, { method: 'PATCH', body: JSON.stringify({ manufacturer: 'Corrected manufacturer' }) }), { params: Promise.resolve({ id: stored._id.toHexString() }) });
+  assert.equal(edited.status, 200); assert.equal((await edited.json()).device.manufacturer, 'Corrected manufacturer');
+});
 
 function directoryHarness() {
   const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
