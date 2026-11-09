@@ -1,6 +1,7 @@
 export type UiLanguage = "en" | "th";
 
 export const UI_EN: Record<string, string> = {
+  "จำนวนเครื่องและผู้ถือตามไซต์": "Phones and holders by site",
   "จัดการไซต์และบุคลากร": "Manage sites and people",
   "แสดงเครื่องพร้อมจ่ายที่ไซต์ของคนขับ และสต็อกส่วนกลางสำหรับทีมดำเนินการ": "Show eligible phones at the driver's site, plus central stock for the Implementation Team.",
   "ย้ายเครื่องที่ยังใช้งาน และปิดใช้งานหรือย้ายบุคลากรก่อนปิดไซต์": "Move active devices and deactivate or reassign people before deactivating this site",

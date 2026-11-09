@@ -26,6 +26,7 @@ export interface WorkflowAction {
 
 export const WORKFLOW_ACTIONS = {
   dashboard: { id: "dashboard", th: "ภาพรวม", en: "Dashboard", detail: "จำนวนเครื่องตามไซต์" },
+  site_tracking: { id: "site_tracking", th: "ติดตามรายไซต์", en: "Site tracking", detail: "จำนวนเครื่องและผู้ถือตามไซต์" },
   inventory: { id: "inventory", th: "อุปกรณ์", en: "Devices", detail: "ค้นหาและดูสถานะเครื่อง" },
   receive: { id: "receive", th: "รับเครื่องเข้าระบบ", en: "Receive devices", detail: "เพิ่มทีละเครื่องหรือนำเข้าไฟล์" },
   technical: { id: "technical", th: "ตรวจสอบข้อมูลและสภาพเครื่อง", en: "Review device information", detail: "ตรวจเครื่องก่อนจ่ายใหม่" },
@@ -48,17 +49,17 @@ export const WORKFLOW_ROLES: Record<WorkflowAudience, {
   it: {
     th: "ฝ่าย IT", en: "IT", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์",
     note: "เสนอให้รับเครื่องและดูแลข้อมูลได้ ต้องยืนยันสิทธิ์นำเข้าและผู้มีอำนาจอนุญาตจ่ายใหม่ ไม่ให้สิทธิ์ส่งมอบโดยอัตโนมัติ",
-    actions: ["dashboard", "receive", "inventory", "return", "history", "directory"],
+    actions: ["dashboard", "receive", "inventory", "site_tracking", "return", "history", "directory"],
   },
   implementation: {
     th: "ทีมดำเนินการ", en: "Implementation Team", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูและดำเนินงานทุกไซต์ตามสิทธิ์",
     note: "รับเครื่อง โอนไปหัวหน้าไซต์ หรือจ่ายตรงให้คนขับได้ เสนอให้รับคืนและเปลี่ยนเครื่องในขอบเขตเดียวกัน",
-    actions: ["dashboard", "receive", "inventory", "transfer", "issue", "return", "exchange", "history"],
+    actions: ["dashboard", "receive", "inventory", "site_tracking", "transfer", "issue", "return", "exchange", "history"],
   },
   site_leader: {
     th: "หัวหน้าไซต์", en: "Site Leader", scope: "มีไซต์สังกัด ดูเฉพาะเครื่อง คนขับ และรายการในไซต์ตนเอง",
     note: "เป็นทั้งผู้ใช้ระบบและผู้รับดูแลสต็อก การรับเครื่องเข้าไซต์ไม่ต้องลงนามนโยบายคนขับ",
-    actions: ["dashboard", "receipt", "inventory", "issue", "return", "exchange", "history"],
+    actions: ["dashboard", "receipt", "inventory", "site_tracking", "issue", "return", "exchange", "history"],
   },
   driver: {
     th: "คนขับ", en: "Driver", scope: "การส่งมอบและเอกสารของตนเอง",
@@ -68,6 +69,6 @@ export const WORKFLOW_ROLES: Record<WorkflowAudience, {
   system_admin: {
     th: "ผู้ดูแลระบบ", en: "System Admin", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์ และจัดการบัญชี สิทธิ์ ข้อมูลอ้างอิง",
     note: "เป็นสิทธิ์เสริม แยกจากบทบาทปฏิบัติงาน ไม่ได้สิทธิ์จ่ายเครื่องหรือดูเอกสารทุกฉบับโดยอัตโนมัติ",
-    actions: ["dashboard", "inventory", "return", "history", "users", "directory"],
+    actions: ["dashboard", "inventory", "site_tracking", "return", "history", "users", "directory"],
   },
 };

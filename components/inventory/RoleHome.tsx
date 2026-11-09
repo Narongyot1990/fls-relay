@@ -6,8 +6,9 @@ import type { InventoryRole } from "@/lib/inventory";
 import { useLanguage } from "@/components/shared/LanguageProvider";
 
 // This grid is the only navigation surface — every destination is a button here.
-const icons = { inventory: ClipboardList, directory: MapPin, transfer: Send, receipt: CheckCircle2, issue: Smartphone, return: Undo2, exchange: ArrowRightLeft, history: History, policy: FileText, users: Users };
+const icons = { site_tracking: MapPin, inventory: ClipboardList, directory: MapPin, transfer: Send, receipt: CheckCircle2, issue: Smartphone, return: Undo2, exchange: ArrowRightLeft, history: History, policy: FileText, users: Users };
 const colors: Record<keyof typeof icons, string> = {
+  site_tracking: "from-teal-50 to-blue-50",
   inventory: "from-amber-50 to-orange-50", directory: "from-blue-50 to-teal-50",
   issue: "from-blue-50 to-sky-50", return: "from-emerald-50 to-teal-50", exchange: "from-blue-50 to-teal-50",
   history: "from-cyan-50 to-blue-50", transfer: "from-blue-50 to-teal-50",

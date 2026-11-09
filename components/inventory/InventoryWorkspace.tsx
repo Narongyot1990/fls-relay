@@ -7,6 +7,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Home, Search, ArrowLeft, Plus } from "@/components/shared/BrandIcon";
 import { WORKFLOW_ACTIONS, WORKFLOW_ROLES, type WorkflowActionId } from "@/lib/workflow-structure";
 import type { InventoryItem, InventoryRole } from "@/lib/inventory";
+import type { SiteSummary } from "@/lib/site-tracking";
+import { SiteTrackingPanel } from "./SiteTrackingPanel";
+import { SiteInventoryFilters } from "./SiteInventoryFilters";
 import { AdministrationPanel } from "./AdministrationPanel";
 import { InventoryList } from "./InventoryList";
 import { InventoryImport } from "./InventoryImport";
@@ -27,7 +30,7 @@ import { LoadingIcon } from "./LoadingIcon";
 type Person = DirectoryPerson;
 /** null = main menu (Level 1). Any id = that section is open (Level 2/3). */
 type Section = WorkflowActionId | null;
-type Data = { devices: InventoryItem[]; assignedDevices?: InventoryItem[]; sites: DirectorySite[]; holders: Person[]; leaders: Person[]; assignedSite: string | null };
+type Data = { siteSummaries?: SiteSummary[]; devices: InventoryItem[]; assignedDevices?: InventoryItem[]; sites: DirectorySite[]; holders: Person[]; leaders: Person[]; assignedSite: string | null };
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400";
 const input = "mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-base";
 const backButton = "flex min-h-11 items-center gap-2 text-sm text-slate-500";
@@ -107,6 +110,11 @@ export function InventoryWorkspace({ initialSection = null, initialDirectoryTab 
   }
   const listed = devices.filter((item) => (statusFilter === "all" || (statusFilter === "stock" ? ["registered", "in_site_stock"].includes(item.status) : item.status === statusFilter)) && `${item.deviceId} ${item.deviceName} ${item.model} ${item.serial} ${item.imei} ${item.phoneNumber} ${siteName(item.siteId)} ${data?.holders.find((person) => person.id === item.holderId)?.name || ""} ${data?.holders.find((person) => person.id === item.holderId)?.employeeNo || ""}`.toLowerCase().includes(query.trim().toLowerCase()));
   const available = devices.filter((item) => item.status === "registered" || item.status === "in_site_stock").length;
+  function openSitePhones(siteId: string, status: string) {
+    goSection("inventory"); changeSite(siteId); setStatusFilter(status); setQuery("");
+  }
+  function openSiteHistory(siteId: string) { goSection("history"); changeSite(siteId); }
+
 
   async function save() {
     if (!editing || saving || mutation.current) return;
@@ -162,9 +170,12 @@ export function InventoryWorkspace({ initialSection = null, initialDirectoryTab 
             {canWrite && <button type="button" onClick={() => setAdding(true)} className={button}><Plus size={16} />{t("เพิ่มเครื่อง", "Add")}</button>}
           </div>
           {!listed.length && <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">{t("ไม่พบข้อมูลในขอบเขตนี้ ")}{canWrite && t("กด เพิ่มเครื่อง เพื่อรับเครื่องเข้าสต็อก", "Use Add to receive devices into stock.")}</p>}
-          <InventoryList devices={listed} people={data.holders} siteName={siteName} canWrite={canWrite} pending={saving || busy} onEdit={(item) => { setDeleting(null); setEditing(item); setMessage(null); window.scrollTo({ top: 0, behavior: "instant" }); }} onDelete={(item) => { setEditing(null); setDeleteError(null); setDeleting(item); setMessage(null); }} onHistory={(item) => { goSection("history"); setHistoryDevice({ id: item.id, label: item.deviceId }); }} />
+          <SiteInventoryFilters summaries={data.siteSummaries || []} selectedSite={siteLeader ? data.assignedSite || "all" : site} status={statusFilter} locked={siteLeader} disabled={busy || saving} onSelect={(id) => { changeSite(id); setQuery(""); }} />
+          <InventoryList groupBySite={statusFilter === "assigned" && site === "all" && !siteLeader} devices={listed} people={data.holders} siteName={siteName} canWrite={canWrite} pending={saving || busy} onEdit={(item) => { setDeleting(null); setEditing(item); setMessage(null); window.scrollTo({ top: 0, behavior: "instant" }); }} onDelete={(item) => { setEditing(null); setDeleteError(null); setDeleting(item); setMessage(null); }} onHistory={(item) => { goSection("history"); setHistoryDevice({ id: item.id, label: item.deviceId }); }} />
         </>}
       </section>}
+
+      {section === "site_tracking" && data && <section className="space-y-5"><button type="button" onClick={() => goSection(null)} className={backButton}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button><SiteTrackingPanel summaries={data.siteSummaries || []} selectedSite={siteLeader ? data.assignedSite || "all" : site} locked={siteLeader} pending={busy || saving} onSelectSite={changeSite} onPhones={openSitePhones} onHistory={openSiteHistory} onRefresh={reload} /></section>}
 
       {section === "directory" && data && <section className="space-y-5">
         <button type="button" onClick={() => goSection(null)} className={backButton} disabled={isNavigating && pendingSection === null}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button>

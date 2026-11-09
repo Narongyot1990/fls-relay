@@ -42,6 +42,59 @@ const { parseInventoryCsv } = load('lib/inventory-csv.ts');
 const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
 const { validateSiteInput, validatePersonInput } = load('lib/directory.ts');
+const { summarizeSites, countForStatus } = load('lib/site-tracking.ts');
+
+test('site tracking reconciles six assigned phones per site and sixteen central phones', () => {
+  const sites = ['A', 'B'].map((id) => ({ id, code: id, name: `QA ${id}`, active: true }));
+  const people = sites.flatMap((site) => Array.from({ length: 6 }, (_, n) => ({ id: `${site.id}-${n}`, siteId: site.id, type: 'driver', active: true })));
+  const devices = [...people.map((person) => ({ siteId: person.siteId, holderId: person.id, status: 'assigned' })), ...Array.from({ length: 16 }, () => ({ siteId: null, holderId: null, status: 'registered' }))];
+  const rows = summarizeSites(devices, sites, people);
+  assert.deepEqual(rows.map((row) => [row.siteId, row.total, row.assigned, row.inStock, row.driverCount, row.driversWithPhone]), [['A', 6, 6, 0, 6, 6], ['B', 6, 6, 0, 6, 6], [null, 16, 0, 16, 0, 0]]);
+  assert.equal(rows.reduce((n, row) => n + row.total, 0), 28);
+  assert.equal(rows.reduce((n, row) => n + countForStatus(row, 'assigned'), 0), 12);
+  assert.equal(countForStatus(rows[2], 'stock'), 16);
+});
+
+test('site coverage counts distinct active drivers and never infers a phone location from driver affiliation', () => {
+  const rows = summarizeSites([{ siteId: 'A', holderId: '1', status: 'assigned' }, { siteId: 'A', holderId: '1', status: 'assigned' }, { siteId: 'B', holderId: '2', status: 'assigned' }], [{ id: 'A', code: 'A', name: 'A', active: true }, { id: 'B', code: 'B', name: 'B', active: true }], [{ id: '1', siteId: 'A', type: 'driver', active: true }, { id: '2', siteId: 'A', type: 'driver', active: true }, { id: '3', siteId: 'A', type: 'driver', active: false }]);
+  assert.equal(rows[0].assigned, 2); assert.equal(rows[0].driversWithPhone, 1); assert.equal(rows[0].driverCount, 2);
+  assert.equal(rows[1].assigned, 1); assert.equal(rows[1].driversWithPhone, 0);
+});
+
+test('site tracking includes empty/inactive sites, pending phones, unavailable phones and unknown locations', () => {
+  const rows = summarizeSites([{ siteId: 'A', holderId: null, status: 'in_transit' }, { siteId: 'A', holderId: null, status: 'damaged' }, { siteId: 'orphan', holderId: null, status: 'under_inspection' }], [{ id: 'A', code: 'A', name: 'A', active: true }, { id: 'B', code: 'B', name: 'B', active: false }], [], false);
+  assert.equal(rows.find((row) => row.siteId === 'A').pending, 1); assert.equal(countForStatus(rows.find((row) => row.siteId === 'A'), 'damaged'), 1);
+  assert.equal(rows.find((row) => row.siteId === 'B').total, 0); assert.equal(rows.find((row) => row.siteId === 'B').active, false);
+  assert.equal(rows.find((row) => row.siteId === 'orphan').unavailable, 1); assert.ok(rows.every((row) => row.siteId !== null));
+});
+
+test('Site Leader inventory API restricts overview snapshots and summaries to the assigned site', async () => {
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  const own = new ObjectId(), other = new ObjectId(), driver = new ObjectId(), actor = new ObjectId();
+  const sources = {
+    sites: [{ _id: own, code: 'OWN', name: 'Own site', active: true }, { _id: other, code: 'OTHER', name: 'Other site', active: true }],
+    holders: [{ _id: driver, siteId: own, type: 'driver', name: 'QA driver', active: true }, { _id: new ObjectId(), siteId: other, type: 'driver', name: 'Other driver', active: true }],
+    devices: [{ _id: new ObjectId(), status: 'assigned', currentSiteId: own, currentHolderId: driver, active: true }, { _id: new ObjectId(), status: 'registered', currentSiteId: other, currentHolderId: null, active: true }],
+  };
+  const calls = [];
+  const db = { collection: (name) => ({ find: (filter) => {
+    calls.push({ name, filter });
+    const docs = sources[name].filter((doc) => Object.entries(filter).every(([key, value]) => String(doc[key] ?? '') === String(value ?? '')));
+    const cursor = { sort: () => cursor, toArray: async () => docs }; return cursor;
+  } }) };
+  const access = load('lib/inventory-access.ts');
+  const route = loader({
+    '@/lib/db/mongodb': { getDb: async () => db },
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'site_leader', actor: String(actor), siteId: String(own) }) },
+    '@/lib/db/inventory': { ...load('lib/db/inventory.ts'), inventoryCollection: async () => db.collection('devices') },
+    '@/lib/db/accessories': { withAssignments: async (items) => items },
+  })('app/api/inventory/route.ts');
+  const response = await route.GET(new Request('http://localhost/api/inventory?site=all'));
+  assert.equal(response.status, 200); const result = await response.json();
+  assert.equal(result.siteSummaries.length, 1); assert.equal(result.siteSummaries[0].siteId, String(own)); assert.equal(result.siteSummaries[0].assigned, 1); assert.equal(result.siteSummaries[0].driversWithPhone, 1);
+  assert.ok(calls.filter((call) => call.name === 'devices').every((call) => String(call.filter.currentSiteId) === String(own)));
+  assert.equal((await route.GET(new Request(`http://localhost/api/inventory?site=${other}`))).status, 403);
+});
 
 test('IT phone-list migration preserves supplied fields and leaves all phone assignments blank', () => {
   const header = 'Device name,Serial number,Manufacturer,Model,Driver Id,Driver name,Driver Site\n';
