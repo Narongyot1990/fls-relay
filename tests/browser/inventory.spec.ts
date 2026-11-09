@@ -13,10 +13,10 @@ async function harness(page: Page) {
     devices: Array.from({ length: 35 }, (_, index): InventoryItem => ({ id: (index + 1).toString(16).padStart(24, "0"), deviceId: `TEST-${String(index + 1).padStart(3, "0")}`, deviceName: "Browser fixture", model: "", imei: "", serial: "", phoneNumber: "", status: "registered", siteId: null, holderId: null, mdm: {} })),
     sites: [{ id: "aaaaaaaaaaaaaaaaaaaaaaaa", code: "QA", name: "Browser test site", active: true }] as DirectorySite[],
     people: [] as DirectoryPerson[],
-    deleteRequests: 0, siteRequests: 0, personRequests: 0, patchRequests: 0,
+    deleteRequests: 0, siteRequests: 0, personRequests: 0, patchRequests: 0, transferRequests: 0, historyRequests: 0,
     deleteGate: undefined as Promise<void> | undefined, siteGate: undefined as Promise<void> | undefined,
     readGate: undefined as Promise<void> | undefined, patchGate: undefined as Promise<void> | undefined,
-    previewGate: undefined as Promise<void> | undefined, rejectDelete: false,
+    previewGate: undefined as Promise<void> | undefined, transferGate: undefined as Promise<void> | undefined, rejectDelete: false,
   };
   await page.route("**/api/**", async (route) => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
@@ -54,6 +54,16 @@ async function harness(page: Page) {
     if (url.pathname === "/api/inventory/import/preview" && method === "POST") {
       await state.previewGate;
       return json(200, { filename: "fixture.csv", sheet: "CSV", sheets: [], headers: ["Device name"], identifier: "Device name", rows: [], databaseChecked: true });
+    }
+    if (url.pathname === "/api/inventory/transfer" && method === "POST") {
+      state.transferRequests++; await state.transferGate;
+      const body = request.postDataJSON() as { deviceIds: string[]; toSiteId: string };
+      state.devices = state.devices.map((device) => body.deviceIds.includes(device.id) ? { ...device, status: "in_transit", siteId: body.toSiteId } : device);
+      return json(200, { devices: state.devices.filter((device) => body.deviceIds.includes(device.id)) });
+    }
+    if (url.pathname === "/api/inventory/history" && method === "GET") {
+      state.historyRequests++;
+      return json(200, { transactions: [] });
     }
     return json(501, { error: "Unexpected browser-test API request; blocked" });
   });
@@ -169,4 +179,25 @@ test("CSV preview displays loading while the request is pending", async ({ page 
   try { await expect(page.getByRole("button", { name: "Working…", exact: true })).toHaveAttribute("aria-busy", "true"); }
   finally { pending.release(); }
   await expect(page.getByRole("button", { name: "Preview and validate (no writes)", exact: true })).toBeEnabled();
+});
+
+test("Transfer sends selected central-stock devices to a site and shows a pending state", async ({ page }) => {
+  const state = await harness(page), pending = gate(); state.transferGate = pending.promise;
+  await page.goto("/preview");
+  await page.getByLabel("Role", { exact: true }).selectOption("implementation");
+  await tab(page, "Transfer to Site Leader");
+  await page.getByRole("checkbox", { name: /TEST-001/ }).check();
+  await page.getByLabel("Destination site", { exact: true }).selectOption(state.sites[0].id);
+  await page.getByRole("button", { name: "Transfer 1 device(s)", exact: true }).click();
+  try { await expect(page.getByRole("button", { name: "Transferring…", exact: true })).toBeDisabled(); }
+  finally { pending.release(); }
+  await expect(page.getByText("Devices transferred.", { exact: true })).toBeVisible();
+  expect(state.transferRequests).toBe(1);
+});
+
+test("History loads the real scoped ledger", async ({ page }) => {
+  const state = await harness(page);
+  await page.goto("/preview"); await tab(page, "History / Documents");
+  await expect(page.getByText("No history in this scope yet.", { exact: true })).toBeVisible();
+  expect(state.historyRequests).toBeGreaterThanOrEqual(1);
 });

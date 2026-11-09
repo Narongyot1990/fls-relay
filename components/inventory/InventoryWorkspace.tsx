@@ -8,6 +8,11 @@ import { InventoryImport } from "./InventoryImport";
 import { ManualDeviceAdd } from "./ManualDeviceAdd";
 import { RoleHome } from "./RoleHome";
 import { HandoverReview } from "./HandoverReview";
+import { TransferPanel } from "./TransferPanel";
+import { ReceiptPanel } from "./ReceiptPanel";
+import { ReturnPanel } from "./ReturnPanel";
+import { ExchangePanel } from "./ExchangePanel";
+import { HistoryPanel } from "./HistoryPanel";
 import { useLanguage, LanguageSwitcher } from "@/components/shared/LanguageProvider";
 import { canManageDirectory, type DirectoryPerson, type DirectorySite } from "@/lib/directory";
 import { DirectoryPanel } from "./DirectoryPanel";
@@ -87,7 +92,7 @@ export function InventoryWorkspace() {
   const devices = data?.devices ?? [];
   const location = siteLeader ? siteName(data?.assignedSite || null) : site === "all" ? t("ภาพรวมทุกไซต์") : site === "central" ? siteName(null) : siteName(site);
   const listed = devices.filter((item) => `${item.deviceId} ${item.deviceName} ${item.model} ${item.serial} ${item.imei} ${item.phoneNumber}`.toLowerCase().includes(query.toLowerCase()));
-  const available = devices.filter((item) => ["registered", "in_site_stock", "returned"].includes(item.status)).length;
+  const available = devices.filter((item) => item.status === "registered" || item.status === "in_site_stock").length;
 
   async function save() {
     if (!editing || saving || mutation.current) return;
@@ -163,9 +168,20 @@ export function InventoryWorkspace() {
           }} onOpenSites={() => setDirectoryTab("sites")} onSiteView={(siteId) => { goSection("inventory"); if (!siteLeader && site !== siteId) { setSite(siteId); setData(null); setBusy(true); } }} />
       </section>}
 
-      {section === "issue" && data && (siteLeader || role === "implementation") && <HandoverReview key={`${role}:${site}:${leader}`} devices={devices} holders={data.holders} central={!siteLeader} siteName={siteName} operatorName={siteLeader ? leaders.find((person) => person.id === leader)?.name : undefined} operatorRole={WORKFLOW_ROLES[role][language]} onBack={() => goSection(null)} />}
+      {section === "issue" && data && (siteLeader || role === "implementation") && <HandoverReview key={`${role}:${site}:${leader}`} devices={devices} holders={data.holders} central={!siteLeader} siteName={siteName} headers={headers} operatorName={siteLeader ? leaders.find((person) => person.id === leader)?.name : undefined} operatorRole={WORKFLOW_ROLES[role][language]} onBack={() => goSection(null)} onIssued={() => { reload(); goSection(null); }} />}
 
-      {section !== null && section !== "inventory" && section !== "directory" && section !== "issue" && <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+      {["transfer", "receipt", "return", "exchange", "history"].includes(section ?? "") && data && <section className="space-y-5">
+        <button type="button" onClick={() => goSection(null)} className={backButton}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button>
+        <h1 className="text-2xl font-semibold">{WORKFLOW_ACTIONS[section as WorkflowActionId][language]}</h1>
+        {message && <p role="status" className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">{t(message)}</p>}
+        {section === "transfer" && <TransferPanel devices={devices} sites={data.sites} headers={headers} onDone={() => { setMessage(t("โอนเครื่องแล้ว", "Devices transferred.")); reload(); }} />}
+        {section === "receipt" && <ReceiptPanel devices={devices} headers={headers} onDone={() => { setMessage(t("ยืนยันรับเครื่องแล้ว", "Receipt confirmed.")); reload(); }} />}
+        {section === "return" && <ReturnPanel devices={devices} holders={data.holders} headers={headers} onDone={() => { setMessage(t("รับคืนเครื่องแล้ว", "Return recorded.")); reload(); }} />}
+        {section === "exchange" && <ExchangePanel devices={devices} holders={data.holders} headers={headers} onDone={() => { setMessage(t("เปลี่ยนเครื่องแล้ว", "Exchange recorded.")); reload(); }} />}
+        {section === "history" && <HistoryPanel key={siteLeader ? "all" : site} headers={headers} site={siteLeader ? "all" : site} />}
+      </section>}
+
+      {section !== null && !["inventory", "directory", "issue", "transfer", "receipt", "return", "exchange", "history"].includes(section) && <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
         <button type="button" onClick={() => goSection(null)} className={backButton}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button>
         <p className="text-xs text-blue-600">{WORKFLOW_ROLES[role][language]} · {location}</p><h1 className="text-2xl font-semibold">{WORKFLOW_ACTIONS[section][language]}</h1><p className="text-sm leading-7 text-slate-600">{t(WORKFLOW_ACTIONS[section].detail)}</p>
         <p className="rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-800">{t("โครงหน้าสำหรับรีวิว ยังไม่เปิดบันทึกรายการในส่วนนี้ ข้อมูลจริงและ Import ยังคงใช้งานผ่านเมนูเดิมได้")}</p>

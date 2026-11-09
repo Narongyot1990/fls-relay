@@ -205,3 +205,60 @@ test('import commit skips existing rows and inserts only new rows into a fake co
   assert.equal(response.status, 201); assert.equal(inserted.length, 1);
   assert.deepEqual(result.created, ['NEW']); assert.deepEqual(result.skipped, ['EXISTING']);
 });
+
+test('custody write mode allows Implementation and Site Leader, blocks System Admin', async () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    const { inventoryAccess } = load('lib/inventory-access.ts');
+    const request = (role) => new Request('https://example.test/api/inventory/issue', { method: 'POST', headers: { 'X-Inventory-Role': role, Origin: 'https://example.test' } });
+    assert.equal((await inventoryAccess(request('implementation'), 'custody')).role, 'implementation');
+    await assert.rejects(inventoryAccess(request('system_admin'), 'custody'), /Only Implementation and Site Leader/);
+  } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
+});
+
+test('custody eligibility: issue/return device selection matches the state machine', async () => {
+  const { ObjectId } = await import('mongodb');
+  const { loadIssuableDevice, loadAssignedDevice, readCondition } = load('lib/db/custody.ts');
+  const siteX = new ObjectId(), siteY = new ObjectId(), holderA = new ObjectId(), holderB = new ObjectId();
+  const central = { _id: new ObjectId(), active: true, status: 'registered', currentSiteId: null, currentHolderId: null };
+  const atSiteX = { _id: new ObjectId(), active: true, status: 'in_site_stock', currentSiteId: siteX, currentHolderId: null };
+  const atSiteY = { _id: new ObjectId(), active: true, status: 'in_site_stock', currentSiteId: siteY, currentHolderId: null };
+  const held = { _id: new ObjectId(), active: true, status: 'in_site_stock', currentSiteId: siteX, currentHolderId: holderA };
+  const assignedToA = { _id: new ObjectId(), active: true, status: 'assigned', currentHolderId: holderA };
+  const docs = [central, atSiteX, atSiteY, held, assignedToA];
+  function matches(doc, filter) {
+    return Object.entries(filter).every(([key, value]) => {
+      if (key === '$or') return value.some((sub) => matches(doc, sub));
+      const have = doc[key] === undefined ? null : doc[key];
+      const want = value === undefined ? null : value;
+      return (have === null ? null : have.toString()) === (want === null ? null : want.toString());
+    });
+  }
+  const devices = { findOne: async (filter) => docs.find((doc) => matches(doc, filter)) ?? null };
+  assert.equal((await loadIssuableDevice(devices, central._id.toHexString(), siteX))._id, central._id);
+  assert.equal((await loadIssuableDevice(devices, atSiteX._id.toHexString(), siteX))._id, atSiteX._id);
+  await assert.rejects(loadIssuableDevice(devices, atSiteY._id.toHexString(), siteX), /not eligible/);
+  await assert.rejects(loadIssuableDevice(devices, held._id.toHexString(), siteX), /not eligible/);
+  await assert.rejects(loadIssuableDevice(devices, 'not-an-id', siteX), /existing device/);
+  assert.equal((await loadAssignedDevice(devices, assignedToA._id.toHexString(), holderA))._id, assignedToA._id);
+  await assert.rejects(loadAssignedDevice(devices, assignedToA._id.toHexString(), holderB), /not currently assigned/);
+  assert.equal(readCondition('ok'), 'ok'); assert.equal(readCondition('damaged'), 'damaged');
+  assert.throws(() => readCondition('maybe'), /condition/);
+});
+
+test('issue route rejects IT operators and empty signatures before touching the database', async () => {
+  const access = load('lib/inventory-access.ts');
+  const route = loader({
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it', siteId: null, actor: 'public-test-it' }) },
+  })('app/api/inventory/issue/route.ts');
+  const blocked = await route.POST(new Request('http://localhost/api/inventory/issue', { method: 'POST', body: JSON.stringify({ deviceId: 'x', driverId: 'y', signature: 'data:image/png;base64,abc' }) }));
+  assert.equal(blocked.status, 403);
+  const implementation = loader({
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation', siteId: null, actor: 'public-test-implementation' }) },
+  })('app/api/inventory/issue/route.ts');
+  const missingSignature = await implementation.POST(new Request('http://localhost/api/inventory/issue', { method: 'POST', body: JSON.stringify({ deviceId: 'x', driverId: 'y', signature: '' }) }));
+  assert.equal(missingSignature.status, 400);
+  const result = await missingSignature.json();
+  assert.match(result.error, /signature/);
+});
