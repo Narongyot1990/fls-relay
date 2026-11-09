@@ -1,7 +1,7 @@
 "use client";
 
-import { InventoryWorkspace } from "@/components/inventory/InventoryWorkspace";
+import { InventoryWorkspace, type WorkspaceStartProps } from "@/components/inventory/InventoryWorkspace";
 
-export function PhonePreview() {
-  return <InventoryWorkspace />;
+export function PhonePreview(props: WorkspaceStartProps) {
+  return <InventoryWorkspace {...props} />;
 }

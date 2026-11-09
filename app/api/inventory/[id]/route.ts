@@ -28,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (conflict) throw new InventoryError("Device ID already exists", 409);
     }
     await ensureInventoryIndexes(collection);
-    const device = await collection.findOneAndUpdate({ _id: old._id, active: true }, { ...(Object.keys(set).length ? { $set: set } : {}), ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { returnDocument: "after" });
+    const device = await collection.findOneAndUpdate({ _id: old._id, active: true }, { $set: { ...set, updatedAt: new Date() }, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { returnDocument: "after" });
     if (!device) throw new InventoryError("Device changed; reload before retrying", 409);
     return Response.json({ device: inventoryItem(device) });
   } catch (error) {

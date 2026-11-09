@@ -8,13 +8,17 @@ export interface InventoryDoc {
   status: string; currentSiteId: ObjectId | null; currentHolderId: ObjectId | null;
   registeredAt?: Date; active: boolean; importSource?: string;
   mdm?: Record<string, string | null>; lastActivity?: unknown;
+  updatedAt?: Date;
 }
 
 export function inventoryItem(doc: InventoryDoc): InventoryItem {
+  const activity = doc.lastActivity && typeof doc.lastActivity === "object" && "at" in doc.lastActivity ? doc.lastActivity.at : doc.lastActivity;
+  const times = [doc.updatedAt, activity, doc.registeredAt].flatMap((value) => value instanceof Date || typeof value === "string" ? [new Date(value).getTime()] : []).filter(Number.isFinite);
   return { id: doc._id.toHexString(), deviceId: doc.deviceId ?? doc.imei ?? doc._id.toHexString(),
     deviceName: doc.deviceName ?? doc.mdm?.deviceName ?? "", imei: doc.imei ?? "", serial: doc.serial ?? "",
     model: doc.model ?? "", phoneNumber: doc.phoneNumber ?? "", status: doc.status,
     siteId: doc.currentSiteId?.toHexString() ?? null, holderId: doc.currentHolderId?.toHexString() ?? null,
+    updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : undefined,
     importSource: doc.importSource, mdm: doc.mdm ?? {} };
 }
 export async function inventoryCollection() { return (await getDb()).collection<InventoryDoc>("devices"); }

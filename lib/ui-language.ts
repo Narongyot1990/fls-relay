@@ -1,6 +1,14 @@
 export type UiLanguage = "en" | "th";
 
 export const UI_EN: Record<string, string> = {
+  "จัดการไซต์และบุคลากร": "Manage sites and people",
+  "แสดงเครื่องพร้อมจ่ายที่ไซต์ของคนขับ และสต็อกส่วนกลางสำหรับทีมดำเนินการ": "Show eligible phones at the driver's site, plus central stock for the Implementation Team.",
+  "ย้ายเครื่องที่ยังใช้งาน และปิดใช้งานหรือย้ายบุคลากรก่อนปิดไซต์": "Move active devices and deactivate or reassign people before deactivating this site",
+  "รับคืนโทรศัพท์จากบุคลากรคนนี้ก่อนเปลี่ยนไซต์ ประเภท หรือปิดใช้งาน": "Return this person's assigned phones before changing their site, type or active status",
+  "เพิ่มหัวหน้าไซต์ที่เปิดใช้งานอีกคน ก่อนย้ายหรือปิดใช้งานหัวหน้าคนสุดท้ายของไซต์ที่มีสต็อก": "Assign another active Site Leader before removing the last leader from a site with stock",
+  "สถานะเปิดใช้งานต้องเป็น true หรือ false": "Active must be true or false",
+  "ไม่พบรายการ": "Record not found",
+  "รายการมีการเปลี่ยนแปลง กรุณาโหลดข้อมูลใหม่ก่อนลองอีกครั้ง": "Record changed; reload before retrying",
   "รหัสไซต์": "Site code",
   "ประเภทบุคลากร": "Person type",
   "ไซต์สังกัด": "Assigned site",

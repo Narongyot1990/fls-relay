@@ -36,7 +36,7 @@ export const WORKFLOW_ACTIONS = {
   exchange: { id: "exchange", th: "เปลี่ยนเครื่อง", en: "Exchange", detail: "สลับเครื่องของคนขับ" },
   history: { id: "history", th: "ประวัติและเอกสาร", en: "History / Documents", detail: "รายการย้อนหลังและ PDF" },
   policy: { id: "policy", th: "อ่านนโยบายและรับทราบ", en: "Read policy and acknowledge", detail: "อ่านและรับทราบข้อตกลง" },
-  users: { id: "users", th: "จัดการผู้ใช้และสิทธิ์", en: "Users and access", detail: "จัดการบัญชีและสิทธิ์" },
+  users: { id: "users", th: "ผู้ดูแลระบบ", en: "Administration", detail: "จัดการไซต์และบุคลากร" },
   directory: { id: "directory", th: "ทำเนียบ", en: "Directory", detail: "รายชื่อคนขับและหัวหน้าไซต์" },
 } satisfies Record<string, WorkflowAction>;
 
@@ -66,7 +66,7 @@ export const WORKFLOW_ROLES: Record<WorkflowAudience, {
     actions: ["policy"],
   },
   system_admin: {
-    th: "ผู้ดูแลระบบ (ข้อเสนอ)", en: "System Admin (proposed)", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์ และจัดการบัญชี สิทธิ์ ข้อมูลอ้างอิง",
+    th: "ผู้ดูแลระบบ", en: "System Admin", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์ และจัดการบัญชี สิทธิ์ ข้อมูลอ้างอิง",
     note: "เป็นสิทธิ์เสริม แยกจากบทบาทปฏิบัติงาน ไม่ได้สิทธิ์จ่ายเครื่องหรือดูเอกสารทุกฉบับโดยอัตโนมัติ",
     actions: ["dashboard", "inventory", "return", "history", "users", "directory"],
   },

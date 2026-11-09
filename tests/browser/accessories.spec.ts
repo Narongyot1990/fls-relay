@@ -1,3 +1,4 @@
+import { setRole } from "./helpers/profile";
 import { test, expect, type Page } from "@playwright/test";
 import type { InventoryItem } from "../../lib/inventory";
 
@@ -19,7 +20,7 @@ async function setup(page: Page, recorded = true) {
     if (request.method() === "POST" && ["/api/inventory/return", "/api/inventory/exchange"].includes(url.pathname)) { state.writes.push(request.postDataJSON()); return json({ recorded: true }); }
     return route.fulfill({ status: 501, contentType: "application/json", body: JSON.stringify({ error: "Unexpected test request" }) });
   });
-  await page.goto("/preview"); await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }); await page.getByLabel("Role", { exact: true }).selectOption("implementation");
+  await page.goto("/preview"); await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }); await setRole(page, "implementation");
   return state;
 }
 

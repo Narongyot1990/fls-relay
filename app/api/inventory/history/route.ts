@@ -13,10 +13,12 @@ export async function GET(request: Request) {
     const site = access.siteId ?? requestedSite;
     if (!["all", "central"].includes(site) && !ObjectId.isValid(site)) throw new InventoryError("Invalid site");
     const transactions = await transactionCollection();
-    const siteFilter = site === "all" ? {} : site === "central" ? { fromSiteId: null, toSiteId: null } : { $or: [{ fromSiteId: new ObjectId(site) }, { toSiteId: new ObjectId(site) }] };
+    const siteFilter = site === "all" ? {} : site === "central" ? { $or: [{ fromSiteId: null }, { toSiteId: null }] } : { $or: [{ fromSiteId: new ObjectId(site) }, { toSiteId: new ObjectId(site) }] };
+    const deviceId = new URL(request.url).searchParams.get("device");
+    if (deviceId && !ObjectId.isValid(deviceId)) throw new InventoryError("Invalid device filter");
     const offset = Number(new URL(request.url).searchParams.get("offset") || "0");
     if (!Number.isSafeInteger(offset) || offset < 0) throw new InventoryError("Invalid history offset");
-    const page = await transactions.find(siteFilter).sort({ at: -1, _id: -1 }).skip(offset).limit(LIMIT + 1).toArray();
+    const page = await transactions.find({ ...siteFilter, ...(deviceId ? { deviceId: new ObjectId(deviceId) } : {}) }).sort({ at: -1, _id: -1 }).skip(offset).limit(LIMIT + 1).toArray();
     const rows = page.slice(0, LIMIT);
     const db = await getDb();
     const deviceIds = [...new Set(rows.map((row) => row.deviceId.toHexString()))].map((id) => new ObjectId(id));

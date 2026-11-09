@@ -42,6 +42,95 @@ const { readInventoryFile } = load('lib/inventory-file.ts');
 const { importDocument, ensureInventoryIndexes } = load('lib/db/inventory.ts');
 const { validateSiteInput, validatePersonInput } = load('lib/directory.ts');
 
+function directoryHarness() {
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  const siteId = new ObjectId(), secondSiteId = new ObjectId(), driverId = new ObjectId(), leaderId = new ObjectId();
+  const state = {
+    sites: [{ _id: siteId, code: 'QA', name: 'QA site', active: true }, { _id: secondSiteId, code: 'Q2', name: 'Second site', active: true }],
+    holders: [{ _id: driverId, name: 'Driver', employeeNo: 'QA-01', type: 'driver', siteId, active: true, phone: '' }, { _id: leaderId, name: 'Leader', employeeNo: 'QA-SL', type: 'site_leader', siteId, active: true, phone: '' }],
+    devices: [], custody_transactions: [], mutations: 0,
+  };
+  const matches = (doc, filter, insensitive = false) => Object.entries(filter).every(([key, value]) => {
+    if (key === '$or') return value.some((sub) => matches(doc, sub, insensitive));
+    const eq = (a, b) => insensitive ? String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase() : String(a ?? '') === String(b ?? '');
+    if (value && typeof value === 'object' && '$ne' in value) return !eq(doc[key], value.$ne);
+    if (value && typeof value === 'object' && '$in' in value) return value.$in.some((candidate) => eq(doc[key], candidate));
+    return eq(doc[key], value);
+  });
+  const db = { collection: (name) => ({
+    findOne: async (filter, options) => state[name].find((doc) => matches(doc, filter, !!options?.collation)) || null,
+    countDocuments: async (filter) => state[name].filter((doc) => matches(doc, filter)).length,
+    createIndex: async () => {},
+    findOneAndUpdate: async (filter, update) => { const doc = state[name].find((doc) => matches(doc, filter)); if (!doc) return null; Object.assign(doc, update.$set); state.mutations++; return doc; },
+    deleteOne: async (filter) => { const index = state[name].findIndex((doc) => matches(doc, filter)); if (index < 0) return { deletedCount: 0 }; state[name].splice(index, 1); state.mutations++; return { deletedCount: 1 }; },
+  }) };
+  const local = loader({ '@/lib/db/mongodb': { getDb: async () => db } });
+  const call = (kind, id, method, body, role = 'system_admin') => local(`app/api/inventory/${kind}/[id]/route.ts`)[method](new Request(`http://localhost/api/inventory/${kind}/${id}`, { method, headers: { 'X-Inventory-Role': role, Origin: 'http://localhost' }, ...(body ? { body: JSON.stringify(body) } : {}) }), { params: Promise.resolve({ id: String(id) }) });
+  return { state, siteId, secondSiteId, driverId, leaderId, call };
+}
+
+test('directory updates site and person fields through current-role APIs', async () => {
+  const h = directoryHarness();
+  const site = await h.call('sites', h.siteId, 'PATCH', { name: 'Renamed site', code: 'NEW-QA' });
+  assert.equal(site.status, 200); assert.equal((await site.json()).site.name, 'Renamed site');
+  const person = await h.call('people', h.driverId, 'PATCH', { name: 'Renamed driver', employeeNo: 'new-id', phone: '0123' }, 'it');
+  assert.equal(person.status, 200); assert.equal((await person.json()).person.employeeNo, 'NEW-ID');
+  assert.equal(h.state.holders[0].phone, '0123');
+});
+
+test('directory rejects unauthorized roles, invalid fields and duplicate identifiers without mutation', async () => {
+  const h = directoryHarness();
+  for (const role of ['site_leader', 'implementation']) assert.equal((await h.call('sites', h.siteId, 'PATCH', { name: 'Bad' }, role)).status, 403);
+  assert.equal((await h.call('sites', h.siteId, 'PATCH', { code: 'q2' })).status, 409);
+  assert.equal((await h.call('people', h.driverId, 'PATCH', { employeeNo: 'qa-sl' })).status, 409);
+  assert.equal((await h.call('people', h.driverId, 'PATCH', { active: 'false' })).status, 400);
+  assert.equal((await h.call('sites', 'bad-id', 'DELETE')).status, 400);
+  assert.equal(h.state.mutations, 0);
+});
+
+test('directory deletes unused records but protects sites and people referenced by custody history', async () => {
+  const h = directoryHarness();
+  assert.equal((await h.call('sites', h.secondSiteId, 'DELETE')).status, 200);
+  h.state.custody_transactions.push({ fromHolderId: h.driverId, toSiteId: h.siteId });
+  assert.equal((await h.call('people', h.driverId, 'DELETE')).status, 409);
+  assert.equal((await h.call('sites', h.siteId, 'DELETE')).status, 409);
+  assert.equal((await h.call('people', h.driverId, 'PATCH', { active: false })).status, 200);
+  assert.equal(h.state.custody_transactions.length, 1); assert.equal(h.state.holders[0].active, false);
+});
+
+test('directory blocks affiliation changes/deactivation while phones are assigned, but permits name corrections', async () => {
+  const h = directoryHarness(); h.state.devices.push({ currentHolderId: h.driverId, currentSiteId: h.siteId, active: true, status: 'assigned' });
+  for (const change of [{ siteId: String(h.secondSiteId) }, { type: 'site_leader' }, { active: false }]) assert.equal((await h.call('people', h.driverId, 'PATCH', change)).status, 409);
+  assert.equal((await h.call('people', h.driverId, 'DELETE')).status, 409);
+  assert.equal((await h.call('people', h.driverId, 'PATCH', { name: 'Corrected name' })).status, 200);
+  assert.equal((await h.call('sites', h.siteId, 'PATCH', { active: false })).status, 409);
+});
+
+test('directory protects the last Site Leader at a site with stock and supports deactivate/reactivate for unused records', async () => {
+  const h = directoryHarness(); h.state.devices.push({ currentHolderId: null, currentSiteId: h.siteId, active: true, status: 'in_site_stock' });
+  assert.equal((await h.call('people', h.leaderId, 'PATCH', { active: false })).status, 409);
+  assert.equal((await h.call('sites', h.secondSiteId, 'PATCH', { active: false })).status, 200);
+  assert.equal((await h.call('people', h.driverId, 'PATCH', { siteId: String(h.secondSiteId) })).status, 400);
+  assert.equal((await h.call('sites', h.secondSiteId, 'PATCH', { active: true })).status, 200);
+  assert.equal((await h.call('people', h.driverId, 'DELETE')).status, 200);
+});
+
+test('history phone filter keeps the Site Leader scope and rejects invalid or out-of-scope filters', async () => {
+  const { ObjectId } = Module.createRequire(import.meta.url)('mongodb');
+  const siteId = new ObjectId(), deviceId = new ObjectId(); let query;
+  const cursor = { sort: () => cursor, skip: () => cursor, limit: () => cursor, toArray: async () => [] };
+  const access = load('lib/inventory-access.ts');
+  const route = loader({
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ siteId: String(siteId), role: 'site_leader', actor: 'operator' }) },
+    '@/lib/db/transactions': { transactionCollection: async () => ({ find: (filter) => { query = filter; return cursor; } }), custodyTransactionItem: () => {} },
+    '@/lib/db/mongodb': { getDb: async () => ({ collection: () => ({ find: () => cursor }) }) },
+  })('app/api/inventory/history/route.ts');
+  assert.equal((await route.GET(new Request(`http://localhost/api/inventory/history?site=all&device=${deviceId}`))).status, 200);
+  assert.ok(query.deviceId.equals(deviceId)); assert.ok(query.$or.every((branch) => Object.values(branch)[0].equals(siteId)));
+  assert.equal((await route.GET(new Request('http://localhost/api/inventory/history?device=bad'))).status, 400);
+  assert.equal((await route.GET(new Request(`http://localhost/api/inventory/history?site=${new ObjectId()}`))).status, 403);
+});
+
 const acknowledgement = { signature: 'data:image/png;base64,' + 'a'.repeat(80), acknowledged: true, policyLanguage: 'en', policyVersion: 'Professional_Smartphone_Handover_Bilingual_EN_TH-v1', accessories: [0, 1] };
 
 function custodyHarness(role = 'implementation', scoped = false) {

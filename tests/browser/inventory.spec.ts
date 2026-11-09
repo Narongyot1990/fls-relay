@@ -1,3 +1,4 @@
+import { setRole } from "./helpers/profile";
 import { test, expect, type Page } from "@playwright/test";
 import type { InventoryItem } from "../../lib/inventory";
 import type { DirectoryPerson, DirectorySite } from "../../lib/directory";
@@ -166,8 +167,10 @@ test("Add Site Leader links the selected site and appears in the role preview se
   await form.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Browser Site Leader", exact: true })).toBeVisible();
   expect(state.people[0].siteId).toBe(state.sites[0].id);
-  await page.getByLabel("Role", { exact: true }).selectOption("site_leader");
-  await expect(page.getByLabel("Operator", { exact: true })).toHaveValue(state.people[0].id);
+  await setRole(page, "site_leader");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(page.getByRole("dialog").getByLabel("Operator", { exact: true })).toHaveValue(state.people[0].id);
+  await page.keyboard.press("Escape");
   expect(state.personRequests).toBe(1);
 });
 
@@ -195,7 +198,7 @@ test("CSV preview displays loading while the request is pending", async ({ page 
 test("Transfer sends selected central-stock devices to a site and shows a pending state", async ({ page }) => {
   const state = await harness(page), pending = gate(); state.transferGate = pending.promise;
   await page.goto("/preview");
-  await page.getByLabel("Role", { exact: true }).selectOption("implementation");
+  await setRole(page, "implementation");
   await tab(page, "Transfer to Site Leader");
   await page.getByRole("checkbox", { name: /TEST-001/ }).check();
   await page.getByLabel("Destination site", { exact: true }).selectOption(state.sites[0].id);
@@ -244,7 +247,7 @@ test("Inventory cards filter the list and combine with search on mobile and desk
 });
 
 test("Issue shows assignment badges, toggles and phone details without selecting the driver", async ({ page }) => {
-  await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("implementation"); await tab(page, "Issue to driver");
+  await lifecycle(page); await page.goto("/preview"); await setRole(page, "implementation"); await tab(page, "Issue to driver");
   await page.getByRole("button", { name: "Has phone", exact: true }).click();
   await expect(page.getByRole("button", { name: /Driver Without Phone FLS/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Phone details for Driver With Phone", exact: true }).click();
@@ -258,7 +261,7 @@ test("Issue shows assignment badges, toggles and phone details without selecting
 
 for (const role of ["it", "implementation", "site_leader", "system_admin"]) {
   test(`${role} can recall a phone with a required reason and damaged condition`, async ({ page }) => {
-    const state = await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption(role); await tab(page, "Return");
+    const state = await lifecycle(page); await page.goto("/preview"); await setRole(page, role); await tab(page, "Return");
     await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
     if (role === "implementation" || role === "site_leader") await page.getByRole("button", { name: "Recall phone", exact: true }).click();
     const confirm = page.getByRole("button", { name: "Confirm recall and receipt", exact: true });
@@ -274,7 +277,7 @@ for (const role of ["it", "implementation", "site_leader", "system_admin"]) {
 }
 
 test("Exchange lists drivers immediately and requires the driver's new acknowledgement", async ({ page }) => {
-  const state = await lifecycle(page); await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("site_leader"); await tab(page, "Exchange");
+  const state = await lifecycle(page); await page.goto("/preview"); await setRole(page, "site_leader"); await tab(page, "Exchange");
   await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
   await page.getByRole("button", { name: /TEST-002/ }).click();
   await page.getByRole("button", { name: "Continue · Sign for replacement", exact: true }).click();
@@ -312,7 +315,7 @@ test("History groups by phone model, expands transactions and uses Thailand date
 test("Normal return can choose between multiple assigned phones and keeps the other assignment", async ({ page }) => {
   const state = await lifecycle(page);
   state.devices[1] = { ...state.devices[1], status: "assigned", holderId: state.people[0].id };
-  await page.goto("/preview"); await page.getByLabel("Role", { exact: true }).selectOption("implementation"); await tab(page, "Return");
+  await page.goto("/preview"); await setRole(page, "implementation"); await tab(page, "Return");
   await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
   await page.getByLabel("Returning phone", { exact: true }).selectOption(state.devices[1].id);
   await page.getByRole("button", { name: "Record return", exact: true }).click();

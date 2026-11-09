@@ -1,5 +1,9 @@
 # ทดสอบ Inventory / Import กับฐานข้อมูลจริง
 
+การจัดการ Site / People มี Edit, Deactivate/Reactivate และ Delete แล้วสำหรับ IT/System Admin
+เข้า `/preview?manage=sites` หรือ `/preview?manage=people` ได้โดยตรง รายการโทรศัพท์และ History
+ปรับเป็นการ์ดและ timeline ดูวิธีทดสอบกับภาพรีวิวใน [management-tracking-review.md](./management-tracking-review.md)
+
 อัปเดต 9 พฤศจิกายน 2026: Inventory filters, สถานะการรับเครื่องของคนขับ,
 Return/Recall, Exchange พร้อมลายเซ็นใหม่ และประวัติแบบหุบ/ขยายใช้งานผ่าน API แล้ว
 ดูพฤติกรรม สิทธิ์ และขอบเขตการทดสอบล่าสุดใน [lifecycle-updates.md](./lifecycle-updates.md)
