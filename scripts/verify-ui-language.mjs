@@ -33,5 +33,5 @@ assert.equal(response.status, 200);
 const html = await response.text();
 assert.match(html, /<html[^>]*lang="en"/);
 assert.match(html, /<button[^>]*aria-pressed="true"[^>]*>EN<\/button>/);
-assert.ok(html.includes("What would you like to do?"));
+assert.ok(html.includes("Devices"));
 console.log(JSON.stringify({ translationEntries: Object.keys(UI_EN).length, missingTranslations: 0, defaultEnglish: true, previewHttpStatus: response.status }));

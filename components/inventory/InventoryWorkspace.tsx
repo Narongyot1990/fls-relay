@@ -120,7 +120,6 @@ export function InventoryWorkspace() {
     <div className="border-b border-slate-200 bg-white px-4 py-3"><div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
       <label className="text-sm">{t("บทบาท")}<select aria-label={t("Role")} value={role} disabled={saving} onChange={(event) => changeRole(event.target.value as InventoryRole)} className="ml-2 min-h-11 rounded-lg border border-slate-200 px-3 text-blue-700">{roles.map((item) => <option key={item} value={item}>{WORKFLOW_ROLES[item][language]}</option>)}</select></label>
       {siteLeader ? <label className="text-sm">{t("ผู้ใช้จริง")}<select aria-label={t("Operator")} value={leader} disabled={saving} onChange={(event) => { setLeader(event.target.value); setData(null); setBusy(true); setEditing(null); }} className="ml-2 min-h-11 rounded-lg border border-slate-200 px-3"><option value="">{t("เลือก Site Leader")}</option>{leaders.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label> : <label className="text-sm">{t("ดูข้อมูล")}<select aria-label={t("View")} value={site} disabled={saving} onChange={(event) => { setSite(event.target.value); setData(null); setBusy(true); setEditing(null); setDeleting(null); }} className="ml-2 min-h-11 max-w-72 rounded-lg border border-slate-200 px-3"><option value="all">{t("ทุกไซต์ · ภาพรวม")}</option>{siteOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}<option value="central">{t("สต็อกส่วนกลาง · ยังไม่จัดสรรไซต์")}</option></select></label>}
-      <span className="text-xs text-slate-400">{siteLeader ? t("เห็นเฉพาะไซต์สังกัดจากฐานข้อมูล") : t("ส่วนกลาง · ไม่มีไซต์สังกัด")}</span>
     </div></div>
     <main aria-busy={busy || saving || isNavigating} className="mx-auto max-w-5xl space-y-6 px-4 py-7 pb-20 sm:px-6">
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm leading-6 text-red-700">{t(error)}<button onClick={reload} className="ml-3 underline">{t("ลองเชื่อมต่อใหม่")}</button></div>}
@@ -128,7 +127,7 @@ export function InventoryWorkspace() {
       {(busy || isNavigating) && !error && !(siteLeader && !leader) && <div role="status" className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700"><LoadingIcon />{busy ? data ? t("กำลังอัปเดตข้อมูล…", "Updating records…") : t("กำลังอ่านข้อมูลจากฐานข้อมูล…") : t("กำลังเปิดหน้า…", "Opening view…")}</div>}
 
       {section === null && !(siteLeader && !leader) && <>
-        <div><p className="mb-2 flex items-center gap-2 text-xs text-slate-500"><MapPin size={14} />{location}</p><h1 className="text-2xl font-semibold">{WORKFLOW_ROLES[role][language]} · {t("จัดการโทรศัพท์บริษัท")}</h1></div>
+        <p className="flex items-center gap-2 text-xs text-slate-500"><MapPin size={14} />{location}</p>
         <RoleHome role={role} onAction={goSection} pending={busy || saving || isNavigating} />
       </>}
 

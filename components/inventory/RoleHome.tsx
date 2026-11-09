@@ -1,16 +1,16 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, ArrowRightLeft, CheckCircle2, ChevronRight, ClipboardList, FileText, History, MapPin, ShieldCheck, Smartphone, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowRightLeft, CheckCircle2, ChevronRight, ClipboardList, FileText, History, MapPin, Smartphone, Users } from "lucide-react";
 import { WORKFLOW_ACTIONS, WORKFLOW_ROLES, type WorkflowActionId } from "@/lib/workflow-structure";
 import type { InventoryRole } from "@/lib/inventory";
 import { useLanguage } from "@/components/shared/LanguageProvider";
 
 // This grid is the only navigation surface — every destination is a button here.
-const icons = { inventory: ClipboardList, directory: MapPin, technical: ShieldCheck, transfer: ArrowRight, receipt: CheckCircle2, issue: Smartphone, return: ArrowLeft, exchange: ArrowRightLeft, history: History, policy: FileText, users: Users };
+const icons = { inventory: ClipboardList, directory: MapPin, transfer: ArrowRight, receipt: CheckCircle2, issue: Smartphone, return: ArrowLeft, exchange: ArrowRightLeft, history: History, policy: FileText, users: Users };
 const colors: Record<keyof typeof icons, string> = {
   inventory: "from-amber-500 to-amber-600", directory: "from-violet-500 to-violet-600",
   issue: "from-blue-500 to-blue-600", return: "from-emerald-500 to-emerald-600", exchange: "from-violet-500 to-violet-600",
-  history: "from-cyan-500 to-cyan-600", technical: "from-teal-500 to-teal-600", transfer: "from-violet-500 to-violet-600",
+  history: "from-cyan-500 to-cyan-600", transfer: "from-violet-500 to-violet-600",
   receipt: "from-emerald-500 to-emerald-600", users: "from-blue-500 to-blue-600", policy: "from-blue-500 to-blue-600",
 };
 // "receive" isn't its own menu entry — it's the Add button inside Devices (inventory).
@@ -21,7 +21,6 @@ export function RoleHome({ role, onAction, pending = false }: { pending?: boolea
   const actions = WORKFLOW_ROLES[role].actions.filter((id): id is keyof typeof icons => !hiddenFromMenu.has(id));
   if (!actions.length) return null;
   return <nav aria-label={t("เมนูหลัก", "Main menu")}>
-    <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("คุณต้องการทำอะไร?")}</h2>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {actions.map((id) => {
         const Icon = icons[id];
