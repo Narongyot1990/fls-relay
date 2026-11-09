@@ -108,6 +108,12 @@ Do not confuse legacy IMEI identifiers, L1-L4 permissions or direct custody upda
 | `POST /api/inventory/import` | Explicit `confirm: true`; insert valid records, skip existing | Yes |
 | `POST /api/inventory/sites` | Create active site with unique uppercase code | Yes |
 | `POST /api/inventory/people` | Create active driver/Site Leader at an active site | Yes |
+| `POST /api/inventory/transfer` | Central-stock devices -> a site, status `in_transit` | Yes |
+| `POST /api/inventory/receipt` | Site Leader confirms `in_transit` devices into `in_site_stock` | Yes |
+| `POST /api/inventory/issue` | Assign an eligible device to a driver; persists signature/accessories | Yes |
+| `POST /api/inventory/return` | Close an assignment; `condition: ok` or `damaged` | Yes |
+| `POST /api/inventory/exchange` | One driver: return + issue, linked by `replacementRef` | Yes |
+| `GET /api/inventory/history` | Scoped `custody_transactions` ledger with resolved device/holder/site names | No |
 
 The workspace sends `X-Inventory-Role`; Site Leader mode also sends `X-Inventory-Leader`. The server resolves that active holder's assigned site rather than trusting a client-supplied affiliation. Production writes check the request Origin. These checks support public testing and do not authenticate a person.
 
@@ -119,6 +125,8 @@ Inventory writes/import are for IT and Implementation. Site/people creation is f
 - `sites`: code, name and active flag.
 - `holders`: driver or Site Leader, FLS employee number, name, required site, optional phone and active flag.
 - `models` and `transactions`: legacy collections; their existence does not mean the new immutable custody ledger is implemented.
+- `custody_transactions`: the new ledger (`lib/db/transactions.ts`). Not append-only/correction-guarded yet — a real limitation, not a naming coincidence with the legacy `transactions` collection, which this deliberately does not reuse.
+- Device `status` now also includes `in_transit` (transferred, awaiting Site Leader receipt) and `damaged` (returned damaged; not reissuable).
 - `currentSiteId: null` means **Central stock / No site assigned**, not a site named Central.
 - New imports start `registered`, with no site/holder. MDM ownership or Primary user UPN must not become custody or driver identity automatically.
 - Normalized `deviceIdKey` uniqueness and partial optional IMEI/serial indexes are prepared on explicit writes. GET and import preview must stay read-only.
@@ -169,10 +177,10 @@ The agreement JSON contains the full supplied bilingual DOCX terms, eight sectio
 | Inventory editing and restricted deletion | Implemented |
 | Site/people registration and lookup | Implemented |
 | Loading states and portal delete confirmation | Implemented with browser regression coverage |
-| Bilingual agreement and touch signature | Review UI only |
-| Batch transfers / recipient receipt | Workflow outline; persistence still needed |
-| Driver issue / returns / exchange | New complete transactional workflow still needed |
-| Immutable ledger, PDF/evidence, searchable documents | Still needed |
+| Bilingual agreement and touch signature | Persisted on Submit: assignment, signature image and accessory checklist write to `custody_transactions`. No PDF yet. |
+| Batch transfers / recipient receipt | Implemented: central stock -> `in_transit` -> Site Leader confirms -> `in_site_stock`. Central-stock source only; site-to-site transfer still deferred. |
+| Driver issue / returns / exchange | Implemented: `/api/inventory/issue`, `/return`, `/exchange`. Return tags condition `ok`/`damaged`; a damaged device does not return to issuable stock. Exchange links a return + issue via `replacementRef`, written as two rows (no DB session — best-effort revert on partial failure, not a real transaction). |
+| Immutable ledger, PDF/evidence, searchable documents | New `custody_transactions` collection (not the legacy `transactions` collection) backs a real History screen, scoped like every other screen. Rows are not actually append-only/correction-guarded yet, and there is still no PDF or evidence storage. |
 | Stock count, approvals and reporting | Incomplete/placeholders |
 | Real authentication | Deliberately absent for current testing |
 
@@ -235,10 +243,9 @@ Run checks appropriate to actual changes. Do not add live production records jus
 
 Choose the next feature with the user; these are outstanding areas, not automatic authorization to perform every item:
 
-1. Complete batch site transfer/receipt persistence and distinguish Site Leader stock custody from driver assignment.
-2. Add atomic custody transitions and immutable transaction records; guard against concurrent double assignment.
-3. Persist policy version, acknowledgement, signature and evidence; generate/retrieve the agreement PDF, then enable driver Submit.
-4. Implement return-condition checks and linked exchange transactions.
-5. Add directory edit/deactivation with reference/history checks, then history/reporting.
+1. Generate and store the signed agreement PDF; the signature/accessories/policy version are persisted as data on the transaction now, not as a document.
+2. Make `custody_transactions` genuinely append-only with correction records, and move multi-step writes (exchange, batch transfer) onto real MongoDB sessions instead of best-effort sequential updates.
+3. Site-to-site transfer, write-off/retire/lost, stock counts and exceptions remain unimplemented.
+4. Add directory edit/deactivation with reference/history checks, then reporting/export.
 
 Keep the reviewed interface while replacing review-only actions with real behavior. Never substitute mock success for unfinished backend work.
