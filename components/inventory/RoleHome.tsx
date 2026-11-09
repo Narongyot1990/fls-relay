@@ -25,7 +25,7 @@ export function RoleHome({ role, onAction, pending = false }: { pending?: boolea
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {actions.map((id) => {
         const Icon = icons[id];
-        return <button key={id} type="button" disabled={pending} onClick={() => onAction(id)} className="group rounded-xl border border-slate-200 bg-white p-4 text-left transition duration-200 hover:border-blue-200 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+        return <button key={id} type="button" aria-label={WORKFLOW_ACTIONS[id][language]} disabled={pending} onClick={() => onAction(id)} className="group rounded-xl border border-slate-200 bg-white p-4 text-left transition duration-200 hover:border-blue-200 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
           <div className="flex items-center gap-3">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm ${colors[id]}`}><Icon size={20} strokeWidth={1.75} /></span>
             <div className="min-w-0 flex-1"><h3 className="truncate font-semibold">{WORKFLOW_ACTIONS[id][language]}</h3><p className="truncate text-xs text-slate-500">{t(WORKFLOW_ACTIONS[id].detail)}</p></div>

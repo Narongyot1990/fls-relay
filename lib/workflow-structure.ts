@@ -26,7 +26,7 @@ export interface WorkflowAction {
 
 export const WORKFLOW_ACTIONS = {
   dashboard: { id: "dashboard", th: "ภาพรวม", en: "Dashboard", detail: "จำนวนเครื่องตามไซต์" },
-  inventory: { id: "inventory", th: "รายการเครื่อง", en: "Devices / Inventory", detail: "ค้นหาและดูสถานะเครื่อง" },
+  inventory: { id: "inventory", th: "อุปกรณ์", en: "Devices", detail: "ค้นหาและดูสถานะเครื่อง" },
   receive: { id: "receive", th: "รับเครื่องเข้าระบบ", en: "Receive devices", detail: "เพิ่มทีละเครื่องหรือนำเข้าไฟล์" },
   technical: { id: "technical", th: "ตรวจสอบข้อมูลและสภาพเครื่อง", en: "Review device information", detail: "ตรวจเครื่องก่อนจ่ายใหม่" },
   transfer: { id: "transfer", th: "โอนให้หัวหน้าไซต์", en: "Transfer to Site Leader", detail: "ส่งหลายเครื่องให้หัวหน้าไซต์" },
@@ -37,7 +37,7 @@ export const WORKFLOW_ACTIONS = {
   history: { id: "history", th: "ประวัติและเอกสาร", en: "History / Documents", detail: "รายการย้อนหลังและ PDF" },
   policy: { id: "policy", th: "อ่านนโยบายและรับทราบ", en: "Read policy and acknowledge", detail: "อ่านและรับทราบข้อตกลง" },
   users: { id: "users", th: "จัดการผู้ใช้และสิทธิ์", en: "Users and access", detail: "จัดการบัญชีและสิทธิ์" },
-  directory: { id: "directory", th: "จัดการไซต์และรายชื่อบุคลากร", en: "Sites and people", detail: "รายชื่อคนขับและหัวหน้าไซต์" },
+  directory: { id: "directory", th: "ทำเนียบ", en: "Directory", detail: "รายชื่อคนขับและหัวหน้าไซต์" },
 } satisfies Record<string, WorkflowAction>;
 
 export type WorkflowActionId = keyof typeof WORKFLOW_ACTIONS;
