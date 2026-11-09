@@ -63,7 +63,7 @@ async function tab(page: Page, name: string) { await page.getByRole("navigation"
 
 test("Delete opens immediately from a long list without clicking Edit; Cancel does not delete", async ({ page }) => {
   const state = await harness(page);
-  await page.goto("/preview"); await tab(page, "Inventory");
+  await page.goto("/preview"); await tab(page, "Devices");
   await page.getByRole("button", { name: "Delete unused registration", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
@@ -77,7 +77,7 @@ test("Delete opens immediately from a long list without clicking Edit; Cancel do
 
 test("Delete shows loading, prevents duplicate requests and updates the list", async ({ page }) => {
   const state = await harness(page), pending = gate(); state.deleteGate = pending.promise;
-  await page.goto("/preview"); await tab(page, "Inventory");
+  await page.goto("/preview"); await tab(page, "Devices");
   await page.getByRole("button", { name: "Delete unused registration", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Confirm deletion", exact: true }).click();
@@ -94,7 +94,7 @@ test("Delete shows loading, prevents duplicate requests and updates the list", a
 
 test("Delete failures stay visible inside the dialog with retry/cancel available", async ({ page }) => {
   const state = await harness(page); state.rejectDelete = true;
-  await page.goto("/preview"); await tab(page, "Inventory");
+  await page.goto("/preview"); await tab(page, "Devices");
   await page.getByRole("button", { name: "Delete unused registration", exact: true }).first().click();
   const dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Confirm deletion", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("custody history");
@@ -107,7 +107,7 @@ test("Initial reads and Save have visible loading states", async ({ page }) => {
   await page.goto("/preview");
   try { await expect(page.getByRole("status")).toContainText("Loading records"); }
   finally { read.release(); }
-  await tab(page, "Inventory"); await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+  await tab(page, "Devices"); await page.getByRole("button", { name: "Edit", exact: true }).first().click();
   const save = gate(); state.patchGate = save.promise;
   await page.getByLabel("Model", { exact: true }).fill("Reviewed model");
   await page.getByRole("button", { name: "Save to database", exact: true }).click();
@@ -119,7 +119,8 @@ test("Initial reads and Save have visible loading states", async ({ page }) => {
 
 test("Add site saves only on submit and shows a pending button", async ({ page }) => {
   const state = await harness(page), pending = gate(); state.siteGate = pending.promise;
-  await page.goto("/preview"); await tab(page, "Site");
+  await page.goto("/preview"); await tab(page, "Directory");
+  await page.getByRole("button", { name: "Sites", exact: true }).click();
   await page.getByRole("button", { name: "Add site", exact: true }).click();
   const form = page.getByRole("form", { name: "Add site" });
   await form.getByLabel("Site name", { exact: true }).fill("New browser site");
@@ -134,7 +135,7 @@ test("Add site saves only on submit and shows a pending button", async ({ page }
 
 test("Add Site Leader links the selected site and appears in the role preview selector", async ({ page }) => {
   const state = await harness(page);
-  await page.goto("/preview"); await tab(page, "People");
+  await page.goto("/preview"); await tab(page, "Directory");
   await page.getByRole("button", { name: "Add person", exact: true }).click();
   const form = page.getByRole("form", { name: "Add person" });
   await form.getByLabel("Full name", { exact: true }).fill("Browser Site Leader");
@@ -151,7 +152,7 @@ test("Add Site Leader links the selected site and appears in the role preview se
 
 test("People cannot be saved without a real active site", async ({ page }) => {
   const state = await harness(page); state.sites = [];
-  await page.goto("/preview"); await tab(page, "People");
+  await page.goto("/preview"); await tab(page, "Directory");
   await page.getByRole("button", { name: "Add person", exact: true }).click();
   await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   await expect(page.getByText("There are no active sites. Create a site before adding people.", { exact: false })).toBeVisible();
@@ -160,7 +161,9 @@ test("People cannot be saved without a real active site", async ({ page }) => {
 
 test("CSV preview displays loading while the request is pending", async ({ page }) => {
   const state = await harness(page), pending = gate(); state.previewGate = pending.promise;
-  await page.goto("/preview"); await tab(page, "Import CSV / Excel");
+  await page.goto("/preview"); await tab(page, "Devices");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Import file", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: "fixture.csv", mimeType: "text/csv", buffer: Buffer.from("Device name\nBROWSER-ONLY") });
   await page.getByRole("button", { name: "Preview and validate (no writes)", exact: true }).click();
   try { await expect(page.getByRole("button", { name: "Working…", exact: true })).toHaveAttribute("aria-busy", "true"); }

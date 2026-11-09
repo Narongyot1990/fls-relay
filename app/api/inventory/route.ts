@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db/mongodb";
-import { inventoryCollection, inventoryItem } from "@/lib/db/inventory";
+import { inventoryCollection, inventoryItem, ensureInventoryIndexes, manualDocument } from "@/lib/db/inventory";
 import { inventoryAccess, inventoryFailure, InventoryError } from "@/lib/inventory-access";
 
 export async function GET(request: Request) {
@@ -21,4 +21,30 @@ export async function GET(request: Request) {
     const person = (item: typeof holders[number]) => ({ id: String(item._id), name: String(item.name), type: String(item.type), employeeNo: String(item.employeeNo ?? ""), siteId: String(item.siteId), phone: String(item.phone ?? ""), active: item.active === true });
     return Response.json({ devices: devices.map(inventoryItem), sites: sites.map((item) => ({ id: String(item._id), code: String(item.code ?? ""), name: String(item.name), active: item.active === true })), holders: holders.map(person), leaders: leaders.map(person), assignedSite: access.siteId }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return inventoryFailure(error); }
+}
+
+/** Manual single-device add — the non-bulk counterpart to /api/inventory/import. */
+export async function POST(request: Request) {
+  try {
+    await inventoryAccess(request, true);
+    const body = await request.json();
+    const fields = ["deviceId", "deviceName", "model", "imei", "serial", "phoneNumber"] as const;
+    const input: Partial<Record<(typeof fields)[number], string>> = {};
+    for (const key of fields) {
+      if (!(key in body)) continue;
+      if (typeof body[key] !== "string" || body[key].trim().length > 200) throw new InventoryError(`Invalid ${key}`);
+      input[key] = body[key].trim();
+    }
+    if (!input.deviceId) throw new InventoryError("Device ID is required");
+    const collection = await inventoryCollection();
+    const conflict = await collection.findOne({ $or: [{ deviceIdKey: input.deviceId.toLowerCase() }, { deviceId: input.deviceId }, { imei: input.deviceId }] });
+    if (conflict) throw new InventoryError("Device ID already exists", 409);
+    await ensureInventoryIndexes(collection);
+    const doc = manualDocument({ ...input, deviceId: input.deviceId });
+    await collection.insertOne(doc);
+    return Response.json({ device: inventoryItem(doc) }, { status: 201 });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === 11000) return Response.json({ error: "Device ID, IMEI or serial already exists" }, { status: 409 });
+    return inventoryFailure(error);
+  }
 }

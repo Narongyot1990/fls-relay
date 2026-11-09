@@ -1,5 +1,9 @@
 # fls-relay
 
+For the current architecture and Claude handoff, start with
+[`CLAUDE.md`](./CLAUDE.md) and [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md).
+The specifications below include historical plans; they do not describe completion status.
+
 Phone/device custody-tracking web app for FLS Transport — tracks who is holding which
 company phone, across sites, with role-based access for IT, site leads, ops
 supervisors, and management.
@@ -28,11 +32,9 @@ with `MONGODB_URI` set — pull the production value with:
 vercel env pull .env.local
 ```
 
-To seed sample data into a fresh database:
-
-```bash
-node scripts/seed.mjs
-```
+Do not run the legacy `scripts/seed.mjs` during setup. The current workflow uses
+real inventory data and explicit user-confirmed imports. Development may share
+the Production database; never assume it is disposable.
 
 ## Deployment
 

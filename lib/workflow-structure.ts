@@ -25,19 +25,19 @@ export interface WorkflowAction {
 }
 
 export const WORKFLOW_ACTIONS = {
-  dashboard: { id: "dashboard", th: "ภาพรวม", en: "Dashboard", detail: "จำนวนเครื่องตามไซต์ ผู้ดูแล การจ่าย และสภาพเครื่อง" },
-  inventory: { id: "inventory", th: "รายการเครื่อง", en: "Devices / Inventory", detail: "ค้นหาด้วย Device ID และดูไซต์ ผู้ดูแล ผู้รับเครื่อง และสภาพปัจจุบัน" },
-  receive: { id: "receive", th: "รับเครื่องเข้าระบบ", en: "Receive devices", detail: "นำเข้า Excel/CSV หรือเพิ่มเครื่องรายเครื่อง ตรวจรายการซ้ำก่อนบันทึก" },
-  technical: { id: "technical", th: "ตรวจสอบข้อมูลและสภาพเครื่อง", en: "Review device information", detail: "ทบทวนข้อมูลจาก Intune และตรวจเครื่องที่คืนหรือเสียหายก่อนอนุญาตให้จ่ายใหม่" },
-  transfer: { id: "transfer", th: "โอนให้หัวหน้าไซต์", en: "Transfer to Site Leader", detail: "เลือกไซต์ หัวหน้าไซต์ และหลายเครื่อง เลือกบันทึกตรงหรือรอยืนยันรับ" },
-  receipt: { id: "receipt", th: "ยืนยันรับเครื่อง", en: "Confirm receipt", detail: "แสดงเฉพาะรายการที่ขอให้ผู้รับยืนยัน แยกจากรายการที่ผู้โอนบันทึกโดยตรง" },
-  issue: { id: "issue", th: "จ่ายเครื่องให้คนขับ", en: "Issue to driver", detail: "เลือกคนขับและเครื่องในความดูแล อ่านนโยบาย รับทราบ ยืนยัน และเก็บ PDF" },
-  return: { id: "return", th: "รับคืนเครื่อง", en: "Return", detail: "เลือกคนขับหรือเครื่องที่จ่ายอยู่ บันทึกสภาพ ปิดการจ่าย และส่งตรวจเมื่อจำเป็น" },
-  exchange: { id: "exchange", th: "เปลี่ยนเครื่อง", en: "Exchange", detail: "รับคืนเครื่องเก่าและจ่ายเครื่องใหม่เป็นรายการเชื่อมโยง พร้อมรับทราบนโยบายตามที่กำหนด" },
-  history: { id: "history", th: "ประวัติและเอกสาร", en: "History / Documents", detail: "ค้นหารายการย้อนหลังและดาวน์โหลด PDF ตามสิทธิ์" },
-  policy: { id: "policy", th: "อ่านนโยบายและรับทราบ", en: "Read policy and acknowledge", detail: "คนขับอ่านนโยบายไทยหรืออังกฤษฉบับเต็ม แล้วรับทราบผ่านขั้นตอนที่ HR/IT อนุมัติ" },
-  users: { id: "users", th: "จัดการผู้ใช้และสิทธิ์", en: "Users and access", detail: "กำหนดบัญชี บทบาท ไซต์ที่เข้าถึง และปิดใช้งานบัญชี" },
-  directory: { id: "directory", th: "จัดการไซต์และรายชื่อบุคลากร", en: "Sites and people", detail: "ดูแลแหล่งรายชื่อคนขับและหัวหน้าไซต์ แยกประเภทผู้รับให้ชัดเจน" },
+  dashboard: { id: "dashboard", th: "ภาพรวม", en: "Dashboard", detail: "จำนวนเครื่องตามไซต์" },
+  inventory: { id: "inventory", th: "รายการเครื่อง", en: "Devices / Inventory", detail: "ค้นหาและดูสถานะเครื่อง" },
+  receive: { id: "receive", th: "รับเครื่องเข้าระบบ", en: "Receive devices", detail: "เพิ่มทีละเครื่องหรือนำเข้าไฟล์" },
+  technical: { id: "technical", th: "ตรวจสอบข้อมูลและสภาพเครื่อง", en: "Review device information", detail: "ตรวจเครื่องก่อนจ่ายใหม่" },
+  transfer: { id: "transfer", th: "โอนให้หัวหน้าไซต์", en: "Transfer to Site Leader", detail: "ส่งหลายเครื่องให้หัวหน้าไซต์" },
+  receipt: { id: "receipt", th: "ยืนยันรับเครื่อง", en: "Confirm receipt", detail: "ยืนยันเครื่องที่ส่งถึงคุณ" },
+  issue: { id: "issue", th: "จ่ายเครื่องให้คนขับ", en: "Issue to driver", detail: "มอบโทรศัพท์ให้คนขับ" },
+  return: { id: "return", th: "รับคืนเครื่อง", en: "Return", detail: "รับเครื่องที่จ่ายไปคืน" },
+  exchange: { id: "exchange", th: "เปลี่ยนเครื่อง", en: "Exchange", detail: "สลับเครื่องของคนขับ" },
+  history: { id: "history", th: "ประวัติและเอกสาร", en: "History / Documents", detail: "รายการย้อนหลังและ PDF" },
+  policy: { id: "policy", th: "อ่านนโยบายและรับทราบ", en: "Read policy and acknowledge", detail: "อ่านและรับทราบข้อตกลง" },
+  users: { id: "users", th: "จัดการผู้ใช้และสิทธิ์", en: "Users and access", detail: "จัดการบัญชีและสิทธิ์" },
+  directory: { id: "directory", th: "จัดการไซต์และรายชื่อบุคลากร", en: "Sites and people", detail: "รายชื่อคนขับและหัวหน้าไซต์" },
 } satisfies Record<string, WorkflowAction>;
 
 export type WorkflowActionId = keyof typeof WORKFLOW_ACTIONS;

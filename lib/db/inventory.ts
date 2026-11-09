@@ -42,6 +42,17 @@ export async function existingImportIds(rows: ImportRow[]) {
   return new Set(docs.flatMap((doc) => [doc.deviceIdKey, doc.deviceId?.toLowerCase(), doc.mdm?.deviceName?.toLowerCase(), doc.imei?.toLowerCase()].filter((value): value is string => Boolean(value))));
 }
 
+export interface ManualDeviceInput {
+  deviceId: string; deviceName?: string; model?: string; imei?: string; serial?: string; phoneNumber?: string;
+}
+
+export function manualDocument(input: ManualDeviceInput): InventoryDoc {
+  return { _id: new ObjectId(), deviceId: input.deviceId, deviceIdKey: input.deviceId.toLowerCase(),
+    deviceName: input.deviceName ?? "", model: input.model ?? "", imei: input.imei || undefined, serial: input.serial || undefined,
+    phoneNumber: input.phoneNumber ?? "", status: "registered", currentSiteId: null, currentHolderId: null,
+    registeredAt: new Date(), active: true, importSource: "manual", mdm: {} };
+}
+
 export function importDocument(row: ImportRow, filename: string, actor: string): InventoryDoc {
   const at = new Date().toISOString();
   return { _id: new ObjectId(), deviceId: row.deviceId, deviceIdKey: row.deviceId.toLowerCase(), deviceName: row.deviceName,
