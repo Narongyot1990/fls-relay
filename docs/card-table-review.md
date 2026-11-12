@@ -1,5 +1,7 @@
 # Card / table views — 12 November 2026
 
+Site tracking now also supports Card/Table, and Create uses the compact toolbar. See [the latest review](compact-site-create-review.md) for both layouts.
+
 The Devices toolbar was subsequently combined into three mobile rows / one desktop row. See [compact inventory review](compact-inventory-review.md) for the current layout and screenshots.
 
 ## Problem and design

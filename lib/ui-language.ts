@@ -106,6 +106,10 @@ export const UI_EN: Record<string, string> = {
   "เสนอให้รับทราบบนหน้าจอของผู้ปฏิบัติงานก่อน ยังไม่ต้องมีบัญชีหรือหน้าเมนูส่วนตัว การเข้าถึงเอกสารภายหลังต้องควบคุมสิทธิ์": "Review and acknowledge on the operator's screen. No separate account or personal menu is needed initially. Later document access must be controlled.",
   "เป็นสิทธิ์เสริม แยกจากบทบาทปฏิบัติงาน ไม่ได้สิทธิ์จ่ายเครื่องหรือดูเอกสารทุกฉบับโดยอัตโนมัติ": "An additional administrative capability, separate from operational roles. It does not automatically grant handover or unrestricted document access.",
   "คนขับอ่านนโยบายไทยหรืออังกฤษฉบับเต็ม แล้วรับทราบผ่านขั้นตอนที่ HR/IT อนุมัติ": "The driver reads the full Thai or English policy and acknowledges it through the approved process.",
+  "สร้างข้อมูล": "Create", "เพิ่มไซต์": "Add site", "เพิ่มบุคลากร": "Add person",
+  "ค้นหาไซต์": "Search sites", "ค้นหาบุคลากร": "Search people", "ค้นหาชื่อหรือรหัสไซต์": "Search site name or code",
+  "ค้นหาชื่อ รหัสพนักงาน หรือไซต์": "Search name, employee ID or site", "สถานะรายการ": "Record status",
+  "ทุกประเภท": "All people", "ทุกสถานะ": "All statuses", "เปิดใช้งาน": "Active", "ปิดใช้งาน": "Inactive",
 };
 
 const TH_BY_EN = Object.fromEntries(Object.entries(UI_EN).map(([th, en]) => [en, th]));

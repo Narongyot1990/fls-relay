@@ -64,6 +64,7 @@ export function InventoryWorkspace({ initialSection = null, initialDirectoryTab 
   const [saving, setSaving] = useState(false);
   const mutation = useRef(false);
   const [message, setMessage] = useState<string | null>(null);
+  const compactPage = (section === "inventory" && !adding && !editing) || section === "site_tracking" || section === "directory";
   const canWrite = role === "implementation";
   const siteLeader = role === "site_leader";
   const manageDirectory = canManageDirectory(role);
@@ -147,10 +148,10 @@ export function InventoryWorkspace({ initialSection = null, initialDirectoryTab 
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
       <div className="mx-auto max-w-5xl space-y-2 sm:px-6">
         <div className="flex items-center justify-between gap-2"><button disabled={saving} onClick={() => goSection(null)} aria-label={t("กลับเมนูหลัก", "Back to menu")} className="flex min-w-0 items-center gap-3"><FlsBrand /></button><div className="flex shrink-0 items-center gap-2"><LanguageSwitcher />{siteLeader && <ReceiptBell devices={devices} headers={headers} disabled={saving || busy} onDone={() => { setMessage(t("ยืนยันรับเครื่องแล้ว", "Receipt confirmed.")); reload(); }} />}<ProfileMenu role={role} leader={leader} leaders={leaders} disabled={saving || (busy && !data && !error && !siteLeader)} onApply={changeProfile} /></div></div>
-        {!(section === "inventory" && !adding && !editing) && <WorkspaceScope site={site} label={location} sites={siteOptions} locked={siteLeader} disabled={saving || busy} onChange={changeSite} />}
+        {!compactPage && <WorkspaceScope site={site} label={location} sites={siteOptions} locked={siteLeader} disabled={saving || busy} onChange={changeSite} />}
       </div>
     </header>
-    <main aria-busy={busy || saving || isNavigating} className={`mx-auto max-w-5xl px-4 pb-20 sm:px-6 ${section === "inventory" && !adding && !editing ? "space-y-3 pt-3" : "space-y-6 py-7"}`}>
+    <main aria-busy={busy || saving || isNavigating} className={`mx-auto max-w-5xl px-4 pb-20 sm:px-6 ${compactPage ? "space-y-3 pt-3" : "space-y-6 py-7"}`}>
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm leading-6 text-red-700">{t(error)}<button onClick={reload} className="ml-3 underline">{t("ลองเชื่อมต่อใหม่")}</button></div>}
       {siteLeader && !leader && <p className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm">{t("ยังไม่มี Site Leader ที่เลือกได้ กรุณาตรวจรายชื่อจริงผ่านบทบาทส่วนกลาง ไม่สร้างผู้ใช้ตัวอย่างอัตโนมัติ")}</p>}
       {(busy || isNavigating) && !error && !(siteLeader && !leader) && <div role="status" className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700"><LoadingIcon />{busy ? data ? t("กำลังอัปเดตข้อมูล…", "Updating records…") : t("กำลังอ่านข้อมูลจากฐานข้อมูล…") : t("กำลังเปิดหน้า…", "Opening view…")}</div>}
@@ -182,14 +183,11 @@ export function InventoryWorkspace({ initialSection = null, initialDirectoryTab 
         </>}
       </section>}
 
-      {section === "site_tracking" && data && <section className="space-y-5"><button type="button" onClick={() => goSection(null)} className={backButton}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button><SiteTrackingPanel summaries={data.siteSummaries || []} selectedSite={siteLeader ? data.assignedSite || "all" : site} locked={siteLeader} pending={busy || saving} onSelectSite={changeSite} onPhones={openSitePhones} onHistory={openSiteHistory} onRefresh={reload} /></section>}
+      {section === "site_tracking" && data && <SiteTrackingPanel summaries={data.siteSummaries || []} selectedSite={siteLeader ? data.assignedSite || "all" : site} locked={siteLeader} pending={busy || saving} onBack={() => goSection(null)} scope={<WorkspaceScope compact site={site} label={location} sites={siteOptions} locked={siteLeader} disabled={saving || busy} onChange={changeSite} summaries={data.siteSummaries || []} />} onPhones={openSitePhones} onHistory={openSiteHistory} onRefresh={reload} />}
 
-      {section === "directory" && data && <section className="space-y-5">
-        <button type="button" onClick={() => goSection(null)} className={backButton} disabled={isNavigating && pendingSection === null}><ArrowLeft size={16} />{t("กลับเมนูหลัก", "Back to menu")}</button>
-        <h1 className="text-2xl font-semibold">{WORKFLOW_ACTIONS.directory[language]}</h1>
+      {section === "directory" && data && <section className="space-y-3">
         {message && <p role="status" className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">{t(message)}</p>}
-        <div className="flex gap-2">{(["people", "sites"] as const).map((tab) => <button key={tab} type="button" disabled={saving} onClick={() => setDirectoryTab(tab)} className={`inline-flex min-h-10 items-center rounded-lg px-4 text-sm ${directoryTab === tab ? "bg-blue-600 font-medium text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{tab === "people" ? t("รายชื่อบุคลากร", "People") : t("ไซต์", "Sites")}</button>)}</div>
-        <DirectoryPanel key={`${directoryTab}:${role}:${leader}`} kind={directoryTab} sites={data.sites} people={data.holders} canManage={manageDirectory} pending={busy} headers={headers} onBusyChange={setSaving} onChanged={(text) => { setMessage(text); reload(); }}
+        <DirectoryPanel onBack={() => goSection(null)} onKindChange={setDirectoryTab} scope={<WorkspaceScope compact site={site} label={location} sites={siteOptions} locked={siteLeader} disabled={saving || busy} onChange={changeSite} />} key={`${directoryTab}:${role}:${leader}`} kind={directoryTab} sites={data.sites} people={data.holders} canManage={manageDirectory} pending={busy} headers={headers} onBusyChange={setSaving} onChanged={(text) => { setMessage(text); reload(); }}
           onCreated={(created) => {
             setMessage(t("Record added."));
             if (site !== "all" && site !== created.siteId) { setSite(created.siteId); setData(null); setBusy(true); }

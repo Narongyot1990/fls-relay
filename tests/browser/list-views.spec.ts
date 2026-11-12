@@ -126,3 +126,47 @@ test("Inventory controls use three mobile rows and one desktop row without dupli
   await page.setViewportSize({ width: 320, height: 844 }); await page.getByRole("button", { name: "TH", exact: true }).click(); await fits(page);
   expect((await toolbar.boundingBox())!.height).toBeLessThan(160); expect(state.writes).toHaveLength(0);
 });
+
+test("Create People and Sites share compact controls with no repeated header scope", async ({ page }) => {
+  const state = await fixture(page); await page.goto("/preview?manage=people");
+  for (const kind of ["People", "Sites"]) {
+    await page.getByRole("button", { name: kind, exact: true }).click(); await toggle(page, "Table");
+    const toolbar = page.getByTestId("directory-toolbar");
+    await expect(page.getByTestId("workspace-scope")).toHaveCount(1); await expect(page.getByRole("banner").getByTestId("workspace-scope")).toHaveCount(0);
+    for (const width of [320, 390, 768, 1366]) {
+      await page.setViewportSize({ width, height: 844 }); await fits(page);
+      expect((await toolbar.boundingBox())!.height).toBeLessThan(width >= 1024 ? 65 : 165);
+      expect((await page.getByRole("table").boundingBox())!.y).toBeLessThan(300);
+      if (width === 390 || width === 1366) await shot(page, `compact-create-${kind.toLowerCase()}-${width === 390 ? "mobile" : "desktop"}`);
+    }
+  }
+  await page.setViewportSize({ width: 320, height: 844 }); await page.getByRole("button", { name: "TH", exact: true }).click(); await fits(page);
+  await expect(page.getByRole("heading", { name: "สร้างข้อมูล", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "เพิ่มไซต์", exact: true })).toBeVisible(); expect(state.writes).toHaveLength(0);
+});
+
+test("Site tracking keeps its compact scope and Card/Table preference through drill-down", async ({ page }) => {
+  const state = await fixture(page); await page.goto("/preview"); await open(page, "Site tracking");
+  await expect(page.locator("[data-site-tracking-id]")).toHaveCount(3);
+  const toolbar = page.getByTestId("site-tracking-toolbar");
+  await expect(page.getByTestId("workspace-scope")).toHaveCount(1); await expect(page.getByRole("banner").getByTestId("workspace-scope")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Track by site", exact: true })).toHaveCount(0);
+  await toggle(page, "Table");
+  for (const width of [320, 390, 768, 1366]) {
+    await page.setViewportSize({ width, height: 844 }); await fits(page);
+    expect((await toolbar.boundingBox())!.height).toBeLessThan(width >= 1024 ? 65 : 120);
+    expect((await page.getByRole("table").boundingBox())!.y).toBeLessThan(270);
+    if (width === 390 || width === 1366) await shot(page, `compact-site-tracking-${width === 390 ? "mobile" : "desktop"}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  const expand = page.getByRole("button", { name: `Details for ${state.sites[0].name}`, exact: true }); await expand.click();
+  const detailsId = await expand.getAttribute("aria-controls"), detailRow = page.locator(`[id="${detailsId}"]`);
+  await expect(detailRow).toContainText("Without a phone: 1");
+  await detailRow.getByRole("button", { name: "Stock 1", exact: true }).click(); await expect(page.locator("[data-device-id]")).toHaveCount(1);
+  await expect(page.getByRole("combobox", { name: "Filter device status", exact: true })).toHaveValue("stock");
+  await page.getByRole("banner").getByRole("button", { name: "Back to menu", exact: true }).click(); await open(page, "Site tracking");
+  await expect(page.getByRole("button", { name: "Table", exact: true })).toHaveAttribute("aria-pressed", "true"); await expect(page.locator("[data-site-tracking-id]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Refresh counts", exact: true }).click(); await expect(page.locator("[data-site-tracking-id]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Change scope", exact: true }).click(); await page.getByRole("dialog").getByRole("button", { name: "All sites", exact: true }).click();
+  await expect(page.locator("[data-site-tracking-id]")).toHaveCount(3); expect(state.writes).toHaveLength(0);
+});

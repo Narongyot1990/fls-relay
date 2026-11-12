@@ -78,6 +78,8 @@ test("Site Leader summaries and drill-downs remain restricted to the operator's 
   const { sites, state } = await setup(page); await setRole(page, "site_leader"); await open(page, "Site tracking");
   await expect(page.locator("[data-site-tracking-id]")).toHaveCount(1); await expect(page.locator(`[data-site-tracking-id="${sites[0].id}"]`)).toBeVisible();
   await expect(page.getByRole("button", { name: "Change scope", exact: true })).toHaveCount(0); await expect(page.getByRole("button", { name: /CPOMTP/ })).toHaveCount(0);
+  await page.getByRole("group", { name: "List view", exact: true }).getByRole("button", { name: "Table", exact: true }).click();
+  await expect(page.locator("[data-site-tracking-id]")).toHaveCount(1);
   await page.locator(`[data-site-tracking-id="${sites[0].id}"]`).getByRole("button", { name: "Assigned 6", exact: true }).click();
   await expect(page.locator("[data-device-id]")).toHaveCount(6); await expect(page.locator("[data-device-id]").first()).toContainText("QA CPO_CHO Driver"); expect(state.writes).toBe(0);
 });
@@ -93,7 +95,7 @@ test("Site cards expose unissued drivers and distinguish ready stock from assign
 
 test("Thai site tracking labels and refresh preserve the selected scope", async ({ page }) => {
   const { sites, state } = await setup(page); await page.getByRole("button", { name: "TH", exact: true }).click(); await open(page, "ติดตามรายไซต์");
-  await page.getByRole("region", { name: "เลือกไซต์ที่ต้องการติดตาม", exact: true }).getByRole("button", { name: /CPOCHO CPO_CHO 6/ }).click();
+  await page.getByRole("button", { name: "เปลี่ยนขอบเขต", exact: true }).click(); await page.getByRole("dialog").getByRole("button", { name: /CPOCHO CPO_CHO 6/ }).click();
   await expect(page.locator("[data-site-tracking-id]")).toHaveCount(1); await page.getByRole("button", { name: "อัปเดตยอด", exact: true }).click();
   await expect(page.locator(`[data-site-tracking-id="${sites[0].id}"]`)).toBeVisible(); await expect(page.getByTestId("workspace-scope")).toContainText("CPOCHO");
   expect(state.writes).toBe(0);

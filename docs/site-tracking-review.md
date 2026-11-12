@@ -1,5 +1,7 @@
 # Site tracking review
 
+The current layout uses combined scope controls and Card/Table views. See [compact Site tracking and Create](compact-site-create-review.md) for the latest UI and screenshots; the images below document the earlier layout.
+
 Implemented locally on 2026-11-09. No database assignments or transaction history were changed. Not deployed.
 
 ## Try it
