@@ -9,7 +9,6 @@ import { ObjectId } from "mongodb";
 export async function POST(request: Request) {
   try {
     const access = await inventoryAccess(request, "custody");
-    if (access.role === "it") throw new InventoryError("IT does not issue phones to drivers", 403);
     const body = await request.json();
     const evidence = readAcknowledgement(body);
     const db = await getDb();

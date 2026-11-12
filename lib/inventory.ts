@@ -1,6 +1,6 @@
 export const MAX_IMPORT_ROWS = 2000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
-export type InventoryRole = "it" | "implementation" | "site_leader" | "system_admin";
+export type InventoryRole = "implementation" | "site_leader";
 
 export interface InventoryItem {
   id: string;

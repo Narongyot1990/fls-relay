@@ -81,7 +81,11 @@ async function harness(page: Page) {
   });
   return state;
 }
-async function tab(page: Page, name: string) { await page.getByRole("navigation").getByRole("button", { name, exact: true }).click(); }
+async function tab(page: Page, name: string) {
+  const nav = page.getByRole("navigation");
+  if (!(await nav.getByRole("button", { name, exact: true }).count())) await nav.getByRole("button", { name: /^(More|เมนูเพิ่มเติม)$/, exact: true }).click();
+  await nav.getByRole("button", { name, exact: true }).click();
+}
 
 test("Delete opens immediately from a long list without clicking Edit; Cancel does not delete", async ({ page }) => {
   const state = await harness(page);
@@ -141,7 +145,7 @@ test("Initial reads and Save have visible loading states", async ({ page }) => {
 
 test("Add site saves only on submit and shows a pending button", async ({ page }) => {
   const state = await harness(page), pending = gate(); state.siteGate = pending.promise;
-  await page.goto("/preview"); await tab(page, "Directory");
+  await page.goto("/preview"); await tab(page, "Create");
   await page.getByRole("button", { name: "Sites", exact: true }).click();
   await page.getByRole("button", { name: "Add site", exact: true }).click();
   const form = page.getByRole("form", { name: "Add site" });
@@ -157,7 +161,7 @@ test("Add site saves only on submit and shows a pending button", async ({ page }
 
 test("Add Site Leader links the selected site and appears in the role preview selector", async ({ page }) => {
   const state = await harness(page);
-  await page.goto("/preview"); await tab(page, "Directory");
+  await page.goto("/preview"); await tab(page, "Create");
   await page.getByRole("button", { name: "Add person", exact: true }).click();
   const form = page.getByRole("form", { name: "Add person" });
   await form.getByLabel("Full name", { exact: true }).fill("Browser Site Leader");
@@ -176,7 +180,7 @@ test("Add Site Leader links the selected site and appears in the role preview se
 
 test("People cannot be saved without a real active site", async ({ page }) => {
   const state = await harness(page); state.sites = [];
-  await page.goto("/preview"); await tab(page, "Directory");
+  await page.goto("/preview"); await tab(page, "Create");
   await page.getByRole("button", { name: "Add person", exact: true }).click();
   await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   await expect(page.getByText("There are no active sites. Create a site before adding people.", { exact: false })).toBeVisible();
@@ -243,15 +247,15 @@ async function lifecycle(page: Page) {
 
 test("Inventory cards filter the list and combine with search on mobile and desktop", async ({ page }) => {
   await lifecycle(page); await page.goto("/preview"); await tab(page, "Devices");
-  await page.getByRole("button", { name: "Assigned 1", exact: true }).click();
+  await page.getByRole("combobox", { name: "Filter device status", exact: true }).selectOption("assigned");
   await expect(page.getByRole("heading", { name: "TEST-001", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "TEST-002", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "In stock 2", exact: true }).click();
+  await page.getByRole("combobox", { name: "Filter device status", exact: true }).selectOption("stock");
   await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(2);
   await page.getByRole("textbox").fill("TEST-003");
   await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(1);
   await page.getByRole("textbox").clear();
-  await page.getByRole("button", { name: "Total 4", exact: true }).click();
+  await page.getByRole("combobox", { name: "Filter device status", exact: true }).selectOption("all");
   await expect(page.getByRole("heading", { name: /^TEST-/ })).toHaveCount(4);
   await page.screenshot({ path: "test-results/inventory-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1366, height: 900 });
@@ -272,16 +276,18 @@ test("Issue shows assignment badges, toggles and phone details without selecting
   await expect(page.getByRole("button", { name: /Driver Without Phone FLS/ })).toBeVisible();
 });
 
-for (const role of ["it", "implementation", "site_leader", "system_admin"]) {
+for (const role of ["implementation", "site_leader"]) {
   test(`${role} can recall a phone with a required reason and damaged condition`, async ({ page }) => {
     const state = await lifecycle(page); await page.goto("/preview"); await setRole(page, role); await tab(page, "Return");
     await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
-    if (role === "implementation" || role === "site_leader") await page.getByRole("button", { name: "Recall phone", exact: true }).click();
-    const confirm = page.getByRole("button", { name: "Confirm recall and receipt", exact: true });
-    await expect(confirm).toBeDisabled();
+    await page.getByRole("button", { name: "Next · Return details", exact: true }).click();
+    await page.getByRole("button", { name: "Recall phone", exact: true }).click();
+    const next = page.getByRole("button", { name: "Next · Confirm", exact: true });
+    await expect(next).toBeDisabled();
     await page.getByLabel("Recall reason (required)").fill("Employment ended");
     await page.getByText("Damaged", { exact: true }).click();
-    await confirm.click();
+    await next.click();
+    await page.getByRole("button", { name: "Confirm recall and receipt", exact: true }).click();
     await expect(page.getByText("Return recorded.", { exact: true })).toBeVisible();
     expect(state.returnRequests).toHaveLength(1);
     expect(state.returnRequests[0]).toMatchObject({ recall: true, reason: "Employment ended", condition: "damaged", deviceId: state.devices[0].id });
@@ -292,6 +298,7 @@ for (const role of ["it", "implementation", "site_leader", "system_admin"]) {
 test("Exchange lists drivers immediately and requires the driver's new acknowledgement", async ({ page }) => {
   const state = await lifecycle(page); await page.goto("/preview"); await setRole(page, "site_leader"); await tab(page, "Exchange");
   await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
+  await page.getByRole("button", { name: "Next · Condition & replacement", exact: true }).click();
   await page.getByRole("button", { name: /TEST-002/ }).click();
   await page.getByRole("button", { name: "Continue · Sign for replacement", exact: true }).click();
   const submit = page.getByRole("button", { name: "Submit · Confirm receipt", exact: true });
@@ -331,6 +338,8 @@ test("Normal return can choose between multiple assigned phones and keeps the ot
   await page.goto("/preview"); await setRole(page, "implementation"); await tab(page, "Return");
   await page.getByRole("button", { name: /Driver With Phone FLS/ }).click();
   await page.getByLabel("Returning phone", { exact: true }).selectOption(state.devices[1].id);
+  await page.getByRole("button", { name: "Next · Return details", exact: true }).click();
+  await page.getByRole("button", { name: "Next · Confirm", exact: true }).click();
   await page.getByRole("button", { name: "Record return", exact: true }).click();
   await expect(page.getByText("Return recorded.", { exact: true })).toBeVisible();
   expect(state.devices[0].status).toBe("assigned"); expect(state.devices[1].status).toBe("in_site_stock");
@@ -341,7 +350,7 @@ test("Thai inventory labels and assignment toggles remain readable", async ({ pa
   await lifecycle(page); await page.goto("/preview");
   await page.getByRole("button", { name: "TH", exact: true }).click();
   await page.getByRole("navigation").getByRole("button", { name: "อุปกรณ์", exact: true }).click();
-  await page.getByRole("button", { name: "จ่ายแล้ว 1", exact: true }).click();
-  await expect(page.getByText("แสดง 1 จาก 4 เครื่อง", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "กรองสถานะโทรศัพท์", exact: true }).selectOption("assigned");
+  await expect(page.getByRole("status", { name: "แสดง 1 จาก 4 เครื่อง", exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/inventory-thai.png", fullPage: true });
 });

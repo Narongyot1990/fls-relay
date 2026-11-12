@@ -20,11 +20,11 @@ try {
   const before = await snapshot();
   const file = new File([await readFile(filepath)], basename(filepath));
   const form = new FormData(); form.set("file", file);
-  const response = await fetch("http://localhost:3000/api/inventory/import/preview", { method: "POST", headers: { "X-Inventory-Role": "it" }, body: form });
+  const response = await fetch("http://localhost:3000/api/inventory/import/preview", { method: "POST", headers: { "X-Inventory-Role": "implementation" }, body: form });
   const preview = await response.json();
   assert.equal(response.status, 200, "Preview endpoint must succeed");
   assert.equal(preview.databaseChecked, true);
-  const central = await fetch("http://localhost:3000/api/inventory", { headers: { "X-Inventory-Role": "it" } });
+  const central = await fetch("http://localhost:3000/api/inventory", { headers: { "X-Inventory-Role": "implementation" } });
   assert.equal(central.status, 200);
   const context = await central.json();
   let siteScopeChecked = false;

@@ -8,8 +8,8 @@ import { WORKFLOW_ROLES } from "@/lib/workflow-structure";
 import type { InventoryRole } from "@/lib/inventory";
 import type { DirectoryPerson } from "@/lib/directory";
 
-const roles: InventoryRole[] = ["it", "implementation", "site_leader", "system_admin"];
-const initials: Record<InventoryRole, string> = { it: "IT", implementation: "IM", site_leader: "SL", system_admin: "SA" };
+const roles: InventoryRole[] = ["implementation", "site_leader"];
+const initials: Record<InventoryRole, string> = { implementation: "IM", site_leader: "SL" };
 
 export function ProfileMenu({ role, leader, leaders, disabled, onApply }: {
   role: InventoryRole; leader: string; leaders: DirectoryPerson[]; disabled: boolean;

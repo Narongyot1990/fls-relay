@@ -45,15 +45,19 @@ async function setup(page: Page) {
   });
   return state;
 }
-async function navigate(page: Page, name: string) { await page.getByRole("navigation").getByRole("button", { name, exact: true }).click(); }
+async function navigate(page: Page, name: string) {
+  const nav = page.getByRole("navigation");
+  if (!(await nav.getByRole("button", { name, exact: true }).count())) await nav.getByRole("button", { name: /^(More|เมนูเพิ่มเติม)$/, exact: true }).click();
+  await nav.getByRole("button", { name, exact: true }).click();
+}
 async function screenshot(page: Page, name: string) { await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }); await page.screenshot({ path: `test-results/${name}.png`, fullPage: true }); }
 
-test("Administration opens the current site and people management screens", async ({ page }) => {
-  await setup(page); await page.goto("/preview"); await setRole(page, "system_admin"); await navigate(page, "Administration");
-  await expect(page.getByRole("heading", { name: "Administration", exact: true })).toBeVisible();
+test("Create opens the combined site and people management screen", async ({ page }) => {
+  await setup(page); await page.goto("/preview"); await setRole(page, "implementation"); await navigate(page, "Create");
+  await expect(page.getByRole("heading", { name: "Create", exact: true })).toBeVisible();
   await expect(page.getByText(/Screen outline/)).toHaveCount(0);
-  await screenshot(page, "administration-mobile");
-  await page.getByRole("button").filter({ has: page.getByRole("heading", { name: "Sites", exact: true }) }).click();
+  await screenshot(page, "create-mobile");
+  await page.getByRole("button", { name: "Sites", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Unused test site", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(2);
 });
@@ -119,7 +123,7 @@ test("History separates parties and events, with phone groups, timeline and move
 });
 
 test("Legacy admin bookmarks redirect to current directory screens", async ({ page }) => {
-  await setup(page); await page.goto("/admin/sites"); await expect(page).toHaveURL(/\/preview\?manage=sites/); await expect(page.getByRole("heading", { name: "Directory", exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "Add site", exact: true })).toBeVisible();
+  await setup(page); await page.goto("/admin/sites"); await expect(page).toHaveURL(/\/preview\?manage=sites/); await expect(page.getByRole("heading", { name: "Create", exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "Add site", exact: true })).toBeVisible();
   await page.goto("/admin/holders"); await expect(page).toHaveURL(/\/preview\?manage=people/); await expect(page.getByRole("button", { name: "Add person", exact: true })).toBeVisible();
   await screenshot(page, "directory-cards-mobile");
 });

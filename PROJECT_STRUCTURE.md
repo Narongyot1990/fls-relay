@@ -117,7 +117,11 @@ Do not confuse legacy IMEI identifiers, L1-L4 permissions or direct custody upda
 
 The workspace sends `X-Inventory-Role`; Site Leader mode also sends `X-Inventory-Leader`. The server resolves that active holder's assigned site rather than trusting a client-supplied affiliation. Production writes check the request Origin. These checks support public testing and do not authenticate a person.
 
-Inventory writes/import are for IT and Implementation. Site/people creation is for IT and System Admin. Other views are scoped by role. Review the route and `inventory-access.ts` before extending permissions.
+Inventory writes/import and site/people creation are for Implementation only. Other views are scoped by role. Review the route and `inventory-access.ts` before extending permissions.
+
+The former IT, Implementation and System Admin roles were merged into a single `implementation` operator role (2026-11-12): overlapping central-role permissions made them redundant, so the merged role now carries the union of their actions and access. `system_admin` and `it` are no longer valid `X-Inventory-Role` values.
+
+The main menu (`RoleHome.tsx`) now splits each role's `WORKFLOW_ROLES[role].actions` into `primaryActions` (shown directly) and everything else (behind a "More" tile), reordered by daily-use frequency (2026-11-12). Implementation's primary row is Transfer to Site Leader, Devices, Site tracking, Create; Issue to driver/Return/Exchange moved to More. Site Leader's primary row stays Issue to driver/Return/Exchange. "Confirm receipt" is no longer a menu action — it's a bell icon with a pending-count badge in the header (Site Leader only; `ReceiptBell.tsx`), opening `ReceiptPanel` in a dialog. The former separate Administration ("users" action) and Directory screens were merged into one `directory` action, relabeled "Create", covering Sites and People (drivers/Site Leaders) management; `AdministrationPanel.tsx` was removed. The viewing-scope control also moved out of a dedicated card into a compact pill in the header (`WorkspaceScope.tsx`), with a dropdown for Implementation and a static locked label for Site Leader.
 
 ### MongoDB concepts
 
@@ -138,7 +142,7 @@ Import supports CSV/XLSX up to 5 MB / 2,000 rows. Preview and commit both valida
 
 ### Roles and sites
 
-- Central roles: IT, Implementation and System Admin. They have no site affiliation and can view all sites or select one site.
+- Central role: Implementation (merged former IT, Implementation and System Admin). It has no site affiliation and can view all sites or select one site.
 - Site Leaders and drivers belong to sites. Site Leaders see only their own site's records.
 - Drivers are holders/signers, not separate login accounts in the current design.
 - Role switching is intentional so testers can review multiple workflows.

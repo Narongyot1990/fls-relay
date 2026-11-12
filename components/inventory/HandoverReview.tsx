@@ -10,18 +10,21 @@ import policy from "@/lib/policies/smartphone-handover.json";
 import { AgreementTerms } from "./AgreementTerms";
 import { DriverPicker } from "./DriverPicker";
 import { LoadingIcon } from "./LoadingIcon";
+import { StepProgress } from "./StepProgress";
+import { PhoneChoiceList } from "./PhoneChoiceList";
 
 export type HandoverPerson = { id: string; name: string; employeeNo: string; siteId: string; type: string; active: boolean };
 const primary = "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400";
 const panel = "rounded-xl border border-slate-200 bg-white p-5 sm:p-6";
 const POLICY_VERSION = "Professional_Smartphone_Handover_Bilingual_EN_TH-v1";
 
-export function HandoverReview({ devices, holders, central, siteName, onBack, onIssued, operatorName, operatorRole, headers, exchange, assignmentDevices = devices }: {
+export function HandoverReview({ devices, holders, central, siteName, onBack, onIssued, operatorName, operatorRole, headers, exchange, assignmentDevices = devices, stepLabels }: {
   devices: InventoryItem[]; holders: HandoverPerson[]; central: boolean;
   siteName: (id: string | null) => string; onBack: () => void; onIssued: () => void;
   operatorName?: string; operatorRole?: string; headers: Record<string, string>;
   exchange?: { driverId: string; newDeviceId: string; returningDeviceId: string; condition: "ok" | "damaged" } & AccessoryReturnInput;
   assignmentDevices?: InventoryItem[];
+  stepLabels?: [string, string, string];
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(exchange ? 3 : 1);
   const [driverId, setDriverId] = useState(exchange?.driverId || "");
@@ -62,7 +65,7 @@ export function HandoverReview({ devices, holders, central, siteName, onBack, on
     <div><h1 className="text-2xl font-semibold">{step === 3 ? t("แบบฟอร์มรับมอบโทรศัพท์", "Phone receipt & acknowledgement") : t("ส่งมอบโทรศัพท์", "Issue a phone")}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{t("เลือกคนขับ → เลือกเครื่อง → ส่งมอบ → อ่านเงื่อนไขและเซ็น", "Select driver → Select phone → Hand over → Read and sign")}</p></div>
     <p className="rounded-lg border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-800">{t("Submit บันทึกการส่งมอบ ผู้ถือ และลายเซ็นจริงลงฐานข้อมูล ยังไม่สร้างไฟล์ PDF", "Submit records the assignment, holder and signature for real. A PDF document is not generated yet.")}</p>
     {exchange && <p className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">{t("เปลี่ยนเครื่อง: เซ็นรับเครื่องใหม่ก่อนยืนยัน ระบบจะรับคืนเครื่องเดิมและจ่ายเครื่องใหม่พร้อมกัน", "Exchange: sign for the replacement before confirming. The old phone return and replacement issue are saved together.")}</p>}
-    <ol className="grid grid-cols-3 gap-2">{[t("เลือกคนขับ", "Driver"), t("เลือกโทรศัพท์", "Phone"), t("อ่านและเซ็นรับ", "Read & sign")].map((label, index) => <li key={index} aria-current={step === index + 1 ? "step" : undefined} className={`flex items-center gap-2 border-b-2 pb-4 text-xs sm:text-sm ${step >= index + 1 ? "border-blue-600 text-blue-600" : "border-slate-200 text-slate-400"}`}><span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${step >= index + 1 ? "bg-blue-600 text-white" : "bg-slate-200"}`}>{step > index + 1 ? <Check size={13} /> : index + 1}</span>{label}</li>)}</ol>
+    <StepProgress step={step} labels={stepLabels || [t("เลือกคนขับ", "Driver"), t("เลือกโทรศัพท์", "Phone"), t("อ่านและเซ็นรับ", "Read & sign")]} />
     {step === 1 && <section className={panel}>
       <h2 className="text-lg font-semibold">{t("ใครเป็นผู้รับโทรศัพท์?")}</h2><p className="mt-2 mb-5 text-sm text-slate-500">{t("รายชื่อคนขับจริงในขอบเขตที่คุณเข้าถึง")}</p>
       <DriverPicker holders={holders} devices={assignmentDevices} value={driverId} onChange={(id) => { setDriverId(id); setPhoneId(""); setAccessories([]); setSignature(null); setAcknowledged(false); }} />
@@ -72,7 +75,7 @@ export function HandoverReview({ devices, holders, central, siteName, onBack, on
     {step === 2 && <section className={panel}>
       <div className="mb-6 flex items-center gap-3 rounded-lg bg-slate-50 p-3"><Users size={20} className="text-blue-600" /><div><p className="text-xs text-slate-500">{t("ส่งมอบให้")}</p><p className="mt-1 text-sm font-semibold">{driver?.name} · {driver?.employeeNo || "—"}</p></div></div>
       <h2 className="text-lg font-semibold">{t("เลือกเครื่องพร้อมจ่าย")}</h2><p className="mt-2 mb-5 text-sm leading-6 text-slate-500">{t("แสดงเครื่องพร้อมจ่ายที่ไซต์ของคนขับ และสต็อกส่วนกลางสำหรับทีมดำเนินการ")}</p>
-      <div className="grid gap-3 sm:grid-cols-2">{eligible.map((item) => <button key={item.id} type="button" aria-pressed={phoneId === item.id} onClick={() => { setPhoneId(item.id); setAccessories([]); setSignature(null); setAcknowledged(false); }} className={`rounded-xl border p-4 text-left ${phoneId === item.id ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}><Smartphone size={26} className="mb-4 text-blue-600" /><p className="font-semibold">{item.model || item.deviceName || t("ไม่ระบุรุ่น")}</p><p className="mt-2 break-all text-sm text-blue-600">{item.deviceId}</p><p className="mt-2 text-xs text-slate-500">{item.phoneNumber || t("ยังไม่มีเบอร์โทร")} · {siteName(item.siteId)}</p>{phoneId === item.id && <p className="mt-3 text-xs text-blue-600">{t("เลือกแล้ว ✓")}</p>}</button>)}</div>
+      <PhoneChoiceList devices={eligible} selectedId={phoneId} onSelect={(id) => { setPhoneId(id); setAccessories([]); setSignature(null); setAcknowledged(false); }} siteName={siteName} card={(item) => <button key={item.id} type="button" aria-pressed={phoneId === item.id} onClick={() => { setPhoneId(item.id); setAccessories([]); setSignature(null); setAcknowledged(false); }} className={`rounded-xl border p-4 text-left ${phoneId === item.id ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}><Smartphone size={26} className="mb-4 text-blue-600" /><p className="font-semibold">{item.model || item.deviceName || t("ไม่ระบุรุ่น")}</p><p className="mt-2 break-all text-sm text-blue-600">{item.deviceId}</p><p className="mt-2 text-xs text-slate-500">{item.phoneNumber || t("ยังไม่มีเบอร์โทร")} · {siteName(item.siteId)}</p>{phoneId === item.id && <p className="mt-3 text-xs text-blue-600">{t("เลือกแล้ว ✓")}</p>}</button>} />
       {!eligible.length && <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">{t("ไม่มีเครื่องที่พร้อมจ่ายในขอบเขตนี้")}</p>}
       <div className="mt-6 flex justify-end"><button type="button" disabled={!phone} onClick={() => go(3)} className={primary}>{t("ส่งมอบ · เปิดแบบฟอร์ม")}<ArrowRight size={17} /></button></div>
     </section>}

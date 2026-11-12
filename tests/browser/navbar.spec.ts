@@ -40,11 +40,11 @@ test("Profile opens from the navbar, applies role changes explicitly, and Cancel
   await expect(page.getByRole("combobox", { name: "Role", exact: true })).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "View", exact: true })).toHaveCount(0);
   const trigger = page.getByRole("button", { name: "Profile", exact: true }); await trigger.focus(); await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog"); await dialog.getByLabel("Role", { exact: true }).selectOption("implementation");
+  const dialog = page.getByRole("dialog"); await dialog.getByLabel("Role", { exact: true }).selectOption("site_leader");
   await screenshot(page, "navbar-profile-mobile");
-  expect(state.requests.at(-1)?.role).toBe("it");
+  expect(state.requests.at(-1)?.role).toBe("implementation");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click(); await expect(dialog).toBeHidden(); await expect(trigger).toBeFocused();
-  await setRole(page, "implementation"); await expect(page.getByRole("navigation").getByRole("button", { name: "Issue to driver", exact: true })).toBeEnabled();
+  await setRole(page, "implementation"); await expect(page.getByRole("navigation").getByRole("button", { name: "Devices", exact: true })).toBeEnabled();
   expect(state.requests.at(-1)?.role).toBe("implementation"); expect(state.writes).toBe(0);
 });
 
@@ -58,7 +58,7 @@ test("The scope bar searches sites and filters phones without changing the profi
   await screenshot(page, "navbar-scope-mobile");
   await dialog.getByRole("button", { name: /South depot/ }).click();
   await expect(page.getByTestId("workspace-scope")).toContainText("South depot"); await expect(page.locator("[data-device-id]")).toHaveCount(1);
-  expect(state.requests.at(-1)).toMatchObject({ role: "it", site: sites[1].id });
+  expect(state.requests.at(-1)).toMatchObject({ role: "implementation", site: sites[1].id });
   await page.getByRole("button", { name: "Change scope", exact: true }).click(); await page.getByRole("dialog").getByRole("button", { name: "Central stock", exact: true }).click();
   await expect(page.locator("[data-device-id]")).toHaveCount(1); await expect(page.getByRole("heading", { name: "NAV-PHONE-3", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Change scope", exact: true }).click(); await page.keyboard.press("Escape"); await expect(page.getByRole("button", { name: "Change scope", exact: true })).toBeFocused();
@@ -74,13 +74,13 @@ test("Site Leader profile selection changes operator and remains locked to that 
   expect(state.requests.at(-1)).toMatchObject({ role: "site_leader", leader: leaders[1].id, site: "all" });
   await page.getByRole("button", { name: "Profile", exact: true }).click(); dialog = page.getByRole("dialog"); await dialog.getByLabel("Operator", { exact: true }).selectOption(leaders[0].id); await dialog.getByRole("button", { name: "Apply profile", exact: true }).click();
   await expect(page.getByTestId("workspace-scope")).toContainText("North depot"); expect(state.requests.at(-1)?.leader).toBe(leaders[0].id);
-  await setRole(page, "it"); await expect(page.getByRole("button", { name: "Change scope", exact: true })).toBeEnabled(); await expect(page.getByTestId("workspace-scope")).toContainText("All sites");
+  await setRole(page, "implementation"); await expect(page.getByRole("button", { name: "Change scope", exact: true })).toBeEnabled(); await expect(page.getByTestId("workspace-scope")).toContainText("All sites");
 });
 
 test("Profile prevents choosing a Site Leader without an active operator", async ({ page }) => {
   const { state } = await setup(page, true); await page.getByRole("button", { name: "Profile", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Role", { exact: true }).selectOption("site_leader"); await expect(dialog.getByRole("button", { name: "Apply profile", exact: true })).toBeDisabled();
-  await expect(dialog).toContainText("No active Site Leader is available."); await page.keyboard.press("Escape"); expect(state.requests.at(-1)?.role).toBe("it");
+  await expect(dialog).toContainText("No active Site Leader is available."); await page.keyboard.press("Escape"); expect(state.requests.at(-1)?.role).toBe("implementation");
 });
 
 test("Profile and scope controls are disabled during a pending save", async ({ page }) => {

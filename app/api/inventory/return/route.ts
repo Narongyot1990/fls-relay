@@ -12,7 +12,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const recall = body.recall === true;
     const access = await inventoryAccess(request, recall ? "recall" : "custody");
-    if (!recall && access.role === "it") throw new InventoryError("Use Recall phone to take back a driver's device", 403);
     if (body.reason !== undefined && (typeof body.reason !== "string" || body.reason.length > 1000)) throw new InventoryError("Reason must be at most 1000 characters");
     const reason = typeof body.reason === "string" ? body.reason.trim() : "";
     if (recall && !reason) throw new InventoryError("A recall reason is required");

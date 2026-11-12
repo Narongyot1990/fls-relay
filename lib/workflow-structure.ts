@@ -1,21 +1,9 @@
 /** Planning model from Driver_Phone_Issuing__Return_Process.pdf, pp. 1–5.
  * Independent of legacy L1–L4 permissions. This is not an authorization layer.
  */
-export type OperatorRole = "it" | "implementation" | "site_leader";
-export type WorkflowAudience = OperatorRole | "driver" | "system_admin";
+export type OperatorRole = "implementation" | "site_leader";
+export type WorkflowAudience = OperatorRole | "driver";
 export type Scope = { kind: "sites"; siteIds: string[] } | { kind: "all_sites" };
-
-export interface OperatorAccount {
-  id: string;
-  employeeId: string;
-  displayName: string;
-  roles: OperatorRole[];
-  /** Central roles have all_sites and no affiliation; Site Leaders use their assigned site. */
-  scope: Scope;
-  active: boolean;
-  /** Administrative authority does not grant handover authority. */
-  systemAdmin: boolean;
-}
 
 export interface WorkflowAction {
   id: string;
@@ -37,38 +25,33 @@ export const WORKFLOW_ACTIONS = {
   exchange: { id: "exchange", th: "เปลี่ยนเครื่อง", en: "Exchange", detail: "สลับเครื่องของคนขับ" },
   history: { id: "history", th: "ประวัติและเอกสาร", en: "History / Documents", detail: "รายการย้อนหลังและ PDF" },
   policy: { id: "policy", th: "อ่านนโยบายและรับทราบ", en: "Read policy and acknowledge", detail: "อ่านและรับทราบข้อตกลง" },
-  users: { id: "users", th: "ผู้ดูแลระบบ", en: "Administration", detail: "จัดการไซต์และบุคลากร" },
-  directory: { id: "directory", th: "ทำเนียบ", en: "Directory", detail: "รายชื่อคนขับและหัวหน้าไซต์" },
+  /** Merges the former separate Administration and Directory screens: sites, drivers and Site Leaders in one place. */
+  directory: { id: "directory", th: "สร้างข้อมูล", en: "Create", detail: "จัดการไซต์ คนขับ และหัวหน้าไซต์" },
 } satisfies Record<string, WorkflowAction>;
 
 export type WorkflowActionId = keyof typeof WORKFLOW_ACTIONS;
 
 export const WORKFLOW_ROLES: Record<WorkflowAudience, {
   th: string; en: string; scope: string; note: string; actions: WorkflowActionId[];
+  /** Shown directly on the main menu; the rest of `actions` lives behind the "More" tile. */
+  primaryActions: WorkflowActionId[];
 }> = {
-  it: {
-    th: "ฝ่าย IT", en: "IT", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์",
-    note: "เสนอให้รับเครื่องและดูแลข้อมูลได้ ต้องยืนยันสิทธิ์นำเข้าและผู้มีอำนาจอนุญาตจ่ายใหม่ ไม่ให้สิทธิ์ส่งมอบโดยอัตโนมัติ",
-    actions: ["dashboard", "receive", "inventory", "site_tracking", "return", "history", "directory"],
-  },
   implementation: {
-    th: "ทีมดำเนินการ", en: "Implementation Team", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูและดำเนินงานทุกไซต์ตามสิทธิ์",
-    note: "รับเครื่อง โอนไปหัวหน้าไซต์ หรือจ่ายตรงให้คนขับได้ เสนอให้รับคืนและเปลี่ยนเครื่องในขอบเขตเดียวกัน",
-    actions: ["dashboard", "receive", "inventory", "site_tracking", "transfer", "issue", "return", "exchange", "history"],
+    th: "ทีมดำเนินการ", en: "Implementation Team", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูและดำเนินงานทุกไซต์ตามสิทธิ์ รวมสิทธิ์ของ IT และผู้ดูแลระบบไว้ในบทบาทเดียว",
+    note: "รับเครื่อง โอนไปหัวหน้าไซต์ หรือจ่ายตรงให้คนขับได้ รับคืนและเปลี่ยนเครื่องในขอบเขตเดียวกัน พร้อมดูแลไซต์และบุคลากร",
+    actions: ["dashboard", "receive", "inventory", "site_tracking", "transfer", "issue", "return", "exchange", "history", "directory"],
+    primaryActions: ["transfer", "inventory", "site_tracking", "directory"],
   },
   site_leader: {
     th: "หัวหน้าไซต์", en: "Site Leader", scope: "มีไซต์สังกัด ดูเฉพาะเครื่อง คนขับ และรายการในไซต์ตนเอง",
     note: "เป็นทั้งผู้ใช้ระบบและผู้รับดูแลสต็อก การรับเครื่องเข้าไซต์ไม่ต้องลงนามนโยบายคนขับ",
     actions: ["dashboard", "receipt", "inventory", "site_tracking", "issue", "return", "exchange", "history"],
+    primaryActions: ["issue", "return", "exchange"],
   },
   driver: {
     th: "คนขับ", en: "Driver", scope: "การส่งมอบและเอกสารของตนเอง",
     note: "เสนอให้รับทราบบนหน้าจอของผู้ปฏิบัติงานก่อน ยังไม่ต้องมีบัญชีหรือหน้าเมนูส่วนตัว การเข้าถึงเอกสารภายหลังต้องควบคุมสิทธิ์",
     actions: ["policy"],
-  },
-  system_admin: {
-    th: "ผู้ดูแลระบบ", en: "System Admin", scope: "ส่วนกลาง ไม่มีไซต์สังกัด ดูภาพรวมทุกไซต์หรือกรองรายไซต์ และจัดการบัญชี สิทธิ์ ข้อมูลอ้างอิง",
-    note: "เป็นสิทธิ์เสริม แยกจากบทบาทปฏิบัติงาน ไม่ได้สิทธิ์จ่ายเครื่องหรือดูเอกสารทุกฉบับโดยอัตโนมัติ",
-    actions: ["dashboard", "inventory", "site_tracking", "return", "history", "users", "directory"],
+    primaryActions: [],
   },
 };

@@ -24,7 +24,11 @@ async function setup(page: Page, recorded = true) {
   return state;
 }
 
-async function open(page: Page, name: string) { await page.getByRole("navigation").getByRole("button", { name, exact: true }).click(); }
+async function open(page: Page, name: string) {
+  const nav = page.getByRole("navigation");
+  if (!(await nav.getByRole("button", { name, exact: true }).count())) await nav.getByRole("button", { name: /^(More|เมนูเพิ่มเติม)$/, exact: true }).click();
+  await nav.getByRole("button", { name, exact: true }).click();
+}
 async function selectDriver(page: Page) { await page.getByRole("button", { name: /Accessory Driver QA-01/ }).click(); }
 
 test("New generated icons and the compact FLS header load on mobile and desktop", async ({ page }) => {
@@ -32,7 +36,7 @@ test("New generated icons and the compact FLS header load on mobile and desktop"
   await expect(page.getByRole("img", { name: "FLS", exact: true })).toBeVisible();
   const logo = await page.getByRole("img", { name: "FLS", exact: true }).boundingBox(); expect(logo?.width).toBe(36);
   await expect(page.getByRole("navigation").locator("svg")).toHaveCount(0);
-  expect(await page.getByRole("navigation").locator("[data-brand-icon]").count()).toBeGreaterThan(10);
+  expect(await page.getByRole("navigation").locator("[data-brand-icon]").count()).toBeGreaterThan(5);
   const response = await page.request.get("/brand/fls-icon-atlas.png"); expect(response.status()).toBe(200);
   expect((await page.request.get("/brand/fls-logo-source.jpg")).status()).toBe(200);
   await page.screenshot({ path: "test-results/fls-home-mobile.png", fullPage: true });
@@ -42,6 +46,7 @@ test("New generated icons and the compact FLS header load on mobile and desktop"
 
 test("Issued accessories are available in the driver details popup and transaction history", async ({ page }) => {
   await setup(page); await open(page, "Issue to driver");
+  await page.getByRole("button", { name: "Has phone", exact: true }).click();
   await page.getByRole("button", { name: "Phone details for Accessory Driver", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("Charger adaptor"); await expect(page.getByRole("dialog")).toContainText("USB Cable");
   await expect(page.getByRole("dialog")).not.toContainText("Protective Case");
@@ -55,27 +60,33 @@ test("Issued accessories are available in the driver details popup and transacti
 
 test("Partial accessory return requires a checked checklist and missing-item explanation", async ({ page }) => {
   const state = await setup(page); await open(page, "Return"); await selectDriver(page);
-  const confirm = page.getByRole("button", { name: "Record return", exact: true });
-  await expect(confirm).toBeDisabled();
+  await page.getByRole("button", { name: "Next · Return details", exact: true }).click();
+  const next = page.getByRole("button", { name: "Next · Confirm", exact: true });
+  await expect(next).toBeDisabled();
   await page.getByRole("checkbox", { name: "Charger adaptor", exact: true }).check();
   await page.getByRole("checkbox", { name: "I checked the returned accessories", exact: true }).check();
-  await expect(confirm).toBeDisabled(); expect(state.writes).toHaveLength(0);
+  await expect(next).toBeDisabled(); expect(state.writes).toHaveLength(0);
   await page.getByLabel("Missing accessory notes (required)", { exact: true }).fill("USB cable lost");
   await expect(page.getByRole("checkbox", { name: "Protective Case", exact: true })).toHaveCount(0);
   await page.screenshot({ path: "test-results/accessory-return-mobile.png", fullPage: true });
-  await confirm.click(); expect(state.writes[0]).toMatchObject({ assignmentId: "333333333333333333333333", returnedAccessories: [0], accessoriesChecked: true, accessoryNotes: "USB cable lost" });
+  await next.click();
+  await page.getByRole("button", { name: "Record return", exact: true }).click();
+  expect(state.writes[0]).toMatchObject({ assignmentId: "333333333333333333333333", returnedAccessories: [0], accessoriesChecked: true, accessoryNotes: "USB cable lost" });
 });
 
 test("Complete accessory return records both items without requiring missing notes", async ({ page }) => {
   const state = await setup(page); await open(page, "Return"); await selectDriver(page);
+  await page.getByRole("button", { name: "Next · Return details", exact: true }).click();
   await page.getByRole("checkbox", { name: "Charger adaptor", exact: true }).check(); await page.getByRole("checkbox", { name: "USB Cable", exact: true }).check();
   await page.getByRole("checkbox", { name: "I checked the returned accessories", exact: true }).check();
+  await page.getByRole("button", { name: "Next · Confirm", exact: true }).click();
   await page.getByRole("button", { name: "Record return", exact: true }).click();
   expect(state.writes[0]).toMatchObject({ returnedAccessories: [0, 1], accessoryNotes: "", accessoriesChecked: true });
 });
 
 test("Exchange returns the old accessory kit and signs for an independent replacement kit", async ({ page }) => {
   const state = await setup(page); await open(page, "Exchange"); await selectDriver(page);
+  await page.getByRole("button", { name: "Next · Condition & replacement", exact: true }).click();
   await page.getByRole("button", { name: /PHONE-NEW/ }).click();
   const next = page.getByRole("button", { name: "Continue · Sign for replacement", exact: true }); await expect(next).toBeDisabled();
   await page.getByRole("checkbox", { name: "Charger adaptor", exact: true }).check(); await page.getByRole("checkbox", { name: "USB Cable", exact: true }).check(); await page.getByRole("checkbox", { name: "I checked the returned accessories", exact: true }).check();
@@ -90,6 +101,8 @@ test("Exchange returns the old accessory kit and signs for an independent replac
 
 test("Legacy assignments without accessory evidence explicitly remain unknown", async ({ page }) => {
   const state = await setup(page, false); await open(page, "Return"); await selectDriver(page);
+  await page.getByRole("button", { name: "Next · Return details", exact: true }).click();
   await expect(page.getByText("No accessory record on the original issue. Completeness cannot be verified.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next · Confirm", exact: true }).click();
   await page.getByRole("button", { name: "Record return", exact: true }).click(); expect(state.writes[0].accessoriesChecked).toBe(false);
 });

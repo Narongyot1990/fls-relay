@@ -2,7 +2,7 @@ import type { InventoryRole } from "./inventory";
 
 export interface DirectorySite { id: string; code: string; name: string; active: boolean }
 export interface DirectoryPerson { id: string; name: string; type: string; employeeNo: string; siteId: string; active: boolean; phone?: string }
-export function canManageDirectory(role: InventoryRole) { return role === "it" || role === "system_admin"; }
+export function canManageDirectory(role: InventoryRole) { return role === "implementation"; }
 export class DirectoryValidationError extends Error {}
 
 function text(body: Record<string, unknown>, key: string, max: number, required = true) {

@@ -122,7 +122,7 @@ test('manual creation and metadata edits persist Manufacturer as a first-class p
     insertOne: async (doc) => { stored = doc; },
     findOneAndUpdate: async (_filter, change) => { Object.assign(stored, change.$set); return stored; },
   };
-  const local = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) }, '@/lib/db/inventory': { ...actual, inventoryCollection: async () => collection, ensureInventoryIndexes: async () => {} } });
+  const local = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation' }) }, '@/lib/db/inventory': { ...actual, inventoryCollection: async () => collection, ensureInventoryIndexes: async () => {} } });
   const created = await local('app/api/inventory/route.ts').POST(new Request('http://localhost/api/inventory', { method: 'POST', body: JSON.stringify({ deviceId: 'QA-SERIAL', deviceName: 'QA-PHONE', serial: 'QA-SERIAL', manufacturer: ' Samsung ', model: 'SM-TEST' }) }));
   assert.equal(created.status, 201); assert.equal((await created.json()).device.manufacturer, 'Samsung');
   const edited = await local('app/api/inventory/[id]/route.ts').PATCH(new Request(`http://localhost/api/inventory/${stored._id}`, { method: 'PATCH', body: JSON.stringify({ manufacturer: 'Corrected manufacturer' }) }), { params: Promise.resolve({ id: stored._id.toHexString() }) });
@@ -152,7 +152,7 @@ function directoryHarness() {
     deleteOne: async (filter) => { const index = state[name].findIndex((doc) => matches(doc, filter)); if (index < 0) return { deletedCount: 0 }; state[name].splice(index, 1); state.mutations++; return { deletedCount: 1 }; },
   }) };
   const local = loader({ '@/lib/db/mongodb': { getDb: async () => db } });
-  const call = (kind, id, method, body, role = 'system_admin') => local(`app/api/inventory/${kind}/[id]/route.ts`)[method](new Request(`http://localhost/api/inventory/${kind}/${id}`, { method, headers: { 'X-Inventory-Role': role, Origin: 'http://localhost' }, ...(body ? { body: JSON.stringify(body) } : {}) }), { params: Promise.resolve({ id: String(id) }) });
+  const call = (kind, id, method, body, role = 'implementation') => local(`app/api/inventory/${kind}/[id]/route.ts`)[method](new Request(`http://localhost/api/inventory/${kind}/${id}`, { method, headers: { 'X-Inventory-Role': role, Origin: 'http://localhost' }, ...(body ? { body: JSON.stringify(body) } : {}) }), { params: Promise.resolve({ id: String(id) }) });
   return { state, siteId, secondSiteId, driverId, leaderId, call };
 }
 
@@ -160,14 +160,14 @@ test('directory updates site and person fields through current-role APIs', async
   const h = directoryHarness();
   const site = await h.call('sites', h.siteId, 'PATCH', { name: 'Renamed site', code: 'NEW-QA' });
   assert.equal(site.status, 200); assert.equal((await site.json()).site.name, 'Renamed site');
-  const person = await h.call('people', h.driverId, 'PATCH', { name: 'Renamed driver', employeeNo: 'new-id', phone: '0123' }, 'it');
+  const person = await h.call('people', h.driverId, 'PATCH', { name: 'Renamed driver', employeeNo: 'new-id', phone: '0123' }, 'implementation');
   assert.equal(person.status, 200); assert.equal((await person.json()).person.employeeNo, 'NEW-ID');
   assert.equal(h.state.holders[0].phone, '0123');
 });
 
 test('directory rejects unauthorized roles, invalid fields and duplicate identifiers without mutation', async () => {
   const h = directoryHarness();
-  for (const role of ['site_leader', 'implementation']) assert.equal((await h.call('sites', h.siteId, 'PATCH', { name: 'Bad' }, role)).status, 403);
+  assert.equal((await h.call('sites', h.siteId, 'PATCH', { name: 'Bad' }, 'site_leader')).status, 403);
   assert.equal((await h.call('sites', h.siteId, 'PATCH', { code: 'q2' })).status, 409);
   assert.equal((await h.call('people', h.driverId, 'PATCH', { employeeNo: 'qa-sl' })).status, 409);
   assert.equal((await h.call('people', h.driverId, 'PATCH', { active: 'false' })).status, 400);
@@ -296,7 +296,7 @@ test('exchange rejects missing acknowledgement and devices outside Site Leader s
 });
 
 test('recall requires reason, retains driver identity, and rolls back on audit failure', async () => {
-  const { state, post } = custodyHarness('system_admin');
+  const { state, post } = custodyHarness('implementation');
   const body = { deviceId: state.devices[0]._id.toHexString(), recall: true, reason: '   ', condition: 'ok' };
   assert.equal((await post('return', body)).status, 400); assert.equal(state.devices[0].status, 'assigned');
   body.reason = 'Employment ended'; state.failAudit = true;
@@ -304,7 +304,7 @@ test('recall requires reason, retains driver identity, and rolls back on audit f
   state.failAudit = false;
   assert.equal((await post('return', body)).status, 200); assert.equal(state.devices[0].status, 'in_site_stock');
   assert.equal(state.events[0].reason, body.reason); assert.equal(state.events[0].recall, true);
-  assert.ok(state.events[0].fromHolderId); assert.equal(state.events[0].actorRole, 'system_admin');
+  assert.ok(state.events[0].fromHolderId); assert.equal(state.events[0].actorRole, 'implementation');
 });
 
 test('Site Leaders cannot recall phones outside their site', async () => {
@@ -398,16 +398,14 @@ test('directory validation requires stable site codes, employee IDs and existing
   assert.throws(() => validatePersonInput({ ...person, employeeNo: '' }));
 });
 
-test('IT/System Admin can maintain the directory; field handover roles cannot', async () => {
+test('Implementation can maintain the directory; Site Leader cannot', async () => {
   const previous = process.env.NODE_ENV;
   try {
     process.env.NODE_ENV = 'production';
     const { inventoryAccess } = load('lib/inventory-access.ts');
     const request = (role) => new Request('https://example.test/api/inventory/sites', { method: 'POST', headers: { 'X-Inventory-Role': role, Origin: 'https://example.test' } });
-    assert.equal((await inventoryAccess(request('system_admin'), 'directory')).role, 'system_admin');
-    assert.equal((await inventoryAccess(request('it'), 'directory')).role, 'it');
-    await assert.rejects(inventoryAccess(request('implementation'), 'directory'), /Only IT and System Admin/);
-    await assert.rejects(inventoryAccess(request('site_leader'), 'directory'), /Only IT and System Admin/);
+    assert.equal((await inventoryAccess(request('implementation'), 'directory')).role, 'implementation');
+    await assert.rejects(inventoryAccess(request('site_leader'), 'directory'), /Only Implementation/);
   } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
 });
 
@@ -415,7 +413,7 @@ test('site creation checks duplicates and never creates records on validation fa
   const documents = [], access = load('lib/inventory-access.ts');
   const collection = { findOne: async ({ code }) => documents.find((doc) => doc.code.toLowerCase() === code.toLowerCase()),
     createIndex: async () => {}, insertOne: async (doc) => documents.push(doc) };
-  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) },
+  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation' }) },
     '@/lib/db/mongodb': { getDb: async () => ({ collection: () => collection }) } })('app/api/inventory/sites/route.ts');
   const request = (body) => new Request('https://example.test/api/inventory/sites', { method: 'POST', body: JSON.stringify(body) });
   assert.equal((await route.POST(request({ code: 'bad code', name: 'Test' }))).status, 400); assert.equal(documents.length, 0);
@@ -428,7 +426,7 @@ test('people require an active site and employee IDs are unique across both pers
   const documents = [], access = load('lib/inventory-access.ts'); let siteActive = false;
   const holders = { findOne: async ({ employeeNo }) => documents.find((doc) => doc.employeeNo.toLowerCase() === employeeNo.toLowerCase()),
     createIndex: async () => {}, insertOne: async (doc) => documents.push(doc) };
-  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it' }) },
+  const route = loader({ '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation' }) },
     '@/lib/db/mongodb': { getDb: async () => ({ collection: (name) => {
       if (name === 'sites') return { findOne: async () => siteActive ? { active: true } : null };
       assert.equal(name, 'holders', 'Creating people must not transfer devices or create assignments'); return holders;
@@ -448,9 +446,9 @@ test('production inventory can be read without a password or session', async () 
   try {
     process.env.NODE_ENV = 'production';
     const { inventoryAccess } = load('lib/inventory-access.ts');
-    const access = await inventoryAccess(new Request('https://example.test/api/inventory', { headers: { 'X-Inventory-Role': 'it' } }));
-    assert.equal(access.role, 'it');
-    assert.equal(access.actor, 'public-test-it');
+    const access = await inventoryAccess(new Request('https://example.test/api/inventory', { headers: { 'X-Inventory-Role': 'implementation' } }));
+    assert.equal(access.role, 'implementation');
+    assert.equal(access.actor, 'public-test-implementation');
   } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
 });
 test('public production writes accept same-origin operators without a session', async () => {
@@ -460,7 +458,7 @@ test('public production writes accept same-origin operators without a session', 
     const { inventoryAccess } = load('lib/inventory-access.ts');
     const access = await inventoryAccess(new Request('https://example.test/api/inventory/import', { method: 'POST', headers: { 'X-Inventory-Role': 'implementation', Origin: 'https://example.test' } }), true);
     assert.equal(access.role, 'implementation');
-    await assert.rejects(inventoryAccess(new Request('https://example.test/api/inventory/import', { method: 'POST', headers: { 'X-Inventory-Role': 'it', Origin: 'https://other.test' } }), true), /origin/);
+    await assert.rejects(inventoryAccess(new Request('https://example.test/api/inventory/import', { method: 'POST', headers: { 'X-Inventory-Role': 'implementation', Origin: 'https://other.test' } }), true), /origin/);
   } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
 });
 
@@ -529,7 +527,7 @@ test('import requires explicit confirmation before any index or record writes', 
   let writes = 0;
   const access = load('lib/inventory-access.ts');
   const route = loader({
-    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it', actor: 'test' }) },
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation', actor: 'test' }) },
     '@/lib/db/inventory': { ensureInventoryIndexes: async () => { writes++; } },
   })('app/api/inventory/import/route.ts');
   const response = await route.POST(new Request('http://localhost/api/inventory/import', { method: 'POST', body: JSON.stringify({ rows: [{ deviceId: 'UNIT-1' }] }) }));
@@ -539,7 +537,7 @@ test('import commit skips existing rows and inserts only new rows into a fake co
   const inserted = [];
   const access = load('lib/inventory-access.ts');
   const route = loader({
-    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it', actor: 'test' }) },
+    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation', actor: 'test' }) },
     '@/lib/db/inventory': {
       existingImportIds: async () => new Set(['existing']), ensureInventoryIndexes: async () => {},
       inventoryCollection: async () => ({ insertOne: async (doc) => inserted.push(doc) }), importDocument,
@@ -551,14 +549,14 @@ test('import commit skips existing rows and inserts only new rows into a fake co
   assert.deepEqual(result.created, ['NEW']); assert.deepEqual(result.skipped, ['EXISTING']);
 });
 
-test('custody write mode allows Implementation and Site Leader, blocks System Admin', async () => {
+test('custody write mode allows Implementation and Site Leader, blocks unrecognized roles', async () => {
   const previous = process.env.NODE_ENV;
   try {
     process.env.NODE_ENV = 'production';
     const { inventoryAccess } = load('lib/inventory-access.ts');
     const request = (role) => new Request('https://example.test/api/inventory/issue', { method: 'POST', headers: { 'X-Inventory-Role': role, Origin: 'https://example.test' } });
     assert.equal((await inventoryAccess(request('implementation'), 'custody')).role, 'implementation');
-    await assert.rejects(inventoryAccess(request('system_admin'), 'custody'), /Only Implementation and Site Leader/);
+    await assert.rejects(inventoryAccess(request('it'), 'custody'), /Select an operator role/);
   } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
 });
 
@@ -592,13 +590,8 @@ test('custody eligibility: issue/return device selection matches the state machi
   assert.throws(() => readCondition('maybe'), /condition/);
 });
 
-test('issue route rejects IT operators and empty signatures before touching the database', async () => {
+test('issue route rejects empty signatures before touching the database', async () => {
   const access = load('lib/inventory-access.ts');
-  const route = loader({
-    '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'it', siteId: null, actor: 'public-test-it' }) },
-  })('app/api/inventory/issue/route.ts');
-  const blocked = await route.POST(new Request('http://localhost/api/inventory/issue', { method: 'POST', body: JSON.stringify({ deviceId: 'x', driverId: 'y', signature: 'data:image/png;base64,abc' }) }));
-  assert.equal(blocked.status, 403);
   const implementation = loader({
     '@/lib/inventory-access': { ...access, inventoryAccess: async () => ({ role: 'implementation', siteId: null, actor: 'public-test-implementation' }) },
   })('app/api/inventory/issue/route.ts');

@@ -28,7 +28,11 @@ async function setup(page: Page, oneUnassigned = false) {
   await page.goto("/preview"); await expect(page.getByRole("button", { name: "Profile", exact: true })).toBeEnabled();
   return { sites, state };
 }
-async function open(page: Page, name: string) { await page.getByRole("navigation").getByRole("button", { name, exact: true }).click(); }
+async function open(page: Page, name: string) {
+  const nav = page.getByRole("navigation");
+  if (!(await nav.getByRole("button", { name, exact: true }).count())) await nav.getByRole("button", { name: /^(More|เมนูเพิ่มเติม)$/, exact: true }).click();
+  await nav.getByRole("button", { name, exact: true }).click();
+}
 async function shot(page: Page, name: string) { await page.addStyleTag({ content: "nextjs-portal { display:none !important; }" }); await page.screenshot({ path: `test-results/${name}.png`, fullPage: true }); }
 
 test("Site tracking compares six assigned phones per site and separate central stock", async ({ page }) => {
@@ -44,17 +48,17 @@ test("Site tracking compares six assigned phones per site and separate central s
 });
 
 test("Assigned automatically groups by site and visible site counts drill down without resetting status", async ({ page }) => {
-  const { sites, state } = await setup(page); await open(page, "Devices"); await page.getByRole("button", { name: "Assigned 12", exact: true }).click();
+  const { sites, state } = await setup(page); await open(page, "Devices"); await page.getByRole("combobox", { name: "Filter device status", exact: true }).selectOption("assigned");
   await expect(page.locator("[data-assigned-site-group]")).toHaveCount(2); await expect(page.locator("[data-device-id]")).toHaveCount(12);
   for (const site of sites) await expect(page.locator(`[data-assigned-site-group="${site.id}"] [data-device-id]`)).toHaveCount(6);
   await shot(page, "assigned-by-site-mobile");
-  const filters = page.getByRole("region", { name: "Track by site", exact: true });
-  await filters.getByRole("button", { name: /CPOCHO CPO_CHO 6/ }).click();
-  await expect(page.locator("[data-device-id]")).toHaveCount(6); await expect(page.getByRole("button", { name: "Assigned 6", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Change scope", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /CPOCHO CPO_CHO 6/ }).click();
+  await expect(page.locator("[data-device-id]")).toHaveCount(6); await expect(page.getByRole("combobox", { name: "Filter device status", exact: true })).toHaveValue("assigned");
   await expect(page.getByTestId("workspace-scope")).toContainText("CPOCHO");
-  await filters.getByRole("button", { name: /CPOMTP CPO_MTP 6/ }).click();
+  await page.getByRole("button", { name: "Change scope", exact: true }).click(); await page.getByRole("dialog").getByRole("button", { name: /CPOMTP CPO_MTP 6/ }).click();
   await expect(page.locator("[data-device-id]")).toHaveCount(6); await expect(page.locator("[data-device-id]").first()).toContainText("QA CPO_MTP Driver");
-  await filters.getByRole("button", { name: "All sites 12", exact: true }).click(); await expect(page.locator("[data-assigned-site-group]")).toHaveCount(2);
+  await page.getByRole("button", { name: "Change scope", exact: true }).click(); await page.getByRole("dialog").getByRole("button", { name: "All sites", exact: true }).click(); await expect(page.locator("[data-assigned-site-group]")).toHaveCount(2);
   await page.setViewportSize({ width: 1366, height: 900 }); await shot(page, "assigned-by-site-desktop"); expect(state.writes).toBe(0);
 });
 
@@ -84,7 +88,7 @@ test("Site cards expose unissued drivers and distinguish ready stock from assign
   await expect(card.getByRole("button", { name: "Assigned 5", exact: true })).toBeVisible(); await expect(card).toContainText("5 / 6"); await expect(card).toContainText("Without a phone: 1");
   await card.getByRole("button", { name: "Stock 1", exact: true }).click();
   await expect(page.locator("[data-device-id]")).toHaveCount(1); await expect(page.locator("[data-device-id]")).toContainText("Unassigned");
-  await expect(page.getByRole("button", { name: "In stock 1", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("combobox", { name: "Filter device status", exact: true })).toHaveValue("stock");
 });
 
 test("Thai site tracking labels and refresh preserve the selected scope", async ({ page }) => {

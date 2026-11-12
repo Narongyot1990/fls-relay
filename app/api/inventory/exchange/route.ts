@@ -10,7 +10,6 @@ import { checkAccessoryReturn } from "@/lib/db/accessories";
 export async function POST(request: Request) {
   try {
     const access = await inventoryAccess(request, "custody");
-    if (access.role === "it") throw new InventoryError("IT does not exchange phones with drivers", 403);
     const body = await request.json();
     const evidence = readAcknowledgement(body);
     const condition = readCondition(body.condition);

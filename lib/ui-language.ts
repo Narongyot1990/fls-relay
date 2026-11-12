@@ -3,6 +3,9 @@ export type UiLanguage = "en" | "th";
 export const UI_EN: Record<string, string> = {
   "จำนวนเครื่องและผู้ถือตามไซต์": "Phones and holders by site",
   "จัดการไซต์และบุคลากร": "Manage sites and people",
+  "จัดการไซต์ คนขับ และหัวหน้าไซต์": "Manage sites, drivers and Site Leaders",
+  "ส่วนกลาง ไม่มีไซต์สังกัด ดูและดำเนินงานทุกไซต์ตามสิทธิ์ รวมสิทธิ์ของ IT และผู้ดูแลระบบไว้ในบทบาทเดียว": "Central, no site affiliation. View and operate across all sites per permission. Combines the former IT and System Admin roles into one.",
+  "รับเครื่อง โอนไปหัวหน้าไซต์ หรือจ่ายตรงให้คนขับได้ รับคืนและเปลี่ยนเครื่องในขอบเขตเดียวกัน พร้อมดูแลไซต์และบุคลากร": "Receive devices, transfer to Site Leaders or issue directly to drivers. Handle returns and exchanges in the same scope, plus manage sites and people.",
   "แสดงเครื่องพร้อมจ่ายที่ไซต์ของคนขับ และสต็อกส่วนกลางสำหรับทีมดำเนินการ": "Show eligible phones at the driver's site, plus central stock for the Implementation Team.",
   "ย้ายเครื่องที่ยังใช้งาน และปิดใช้งานหรือย้ายบุคลากรก่อนปิดไซต์": "Move active devices and deactivate or reassign people before deactivating this site",
   "รับคืนโทรศัพท์จากบุคลากรคนนี้ก่อนเปลี่ยนไซต์ ประเภท หรือปิดใช้งาน": "Return this person's assigned phones before changing their site, type or active status",
